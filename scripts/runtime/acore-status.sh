@@ -55,12 +55,36 @@ show_listening_ports() {
 log "Active Release"
 if [[ -e "$CURRENT_LINK" || -L "$CURRENT_LINK" ]]; then
   if command -v readlink >/dev/null 2>&1; then
-    echo "$CURRENT_LINK -> $(readlink -f "$CURRENT_LINK" 2>/dev/null || readlink "$CURRENT_LINK")"
+    current_target="$(readlink -f "$CURRENT_LINK" 2>/dev/null || readlink "$CURRENT_LINK")"
+    echo "$CURRENT_LINK -> $current_target"
+    case "$current_target" in
+      "$BUILD_DIR"/staging|"$BUILD_DIR"/staging/*)
+        echo "ERROR: current points to build staging; switch to a release under $RELEASES_DIR"
+        ;;
+      "$RELEASES_DIR"/*)
+        echo "Runtime path: $CURRENT_LINK"
+        ;;
+      *)
+        echo "WARN: current does not point under releases: $current_target"
+        ;;
+    esac
   else
     echo "$CURRENT_LINK exists"
   fi
 else
   echo "WARN: current release link does not exist: $CURRENT_LINK"
+fi
+
+if [[ -x "$CURRENT_LINK/bin/authserver" ]]; then
+  echo "OK: auth binary: $CURRENT_LINK/bin/authserver"
+else
+  echo "WARN: auth binary missing: $CURRENT_LINK/bin/authserver"
+fi
+
+if [[ -x "$CURRENT_LINK/bin/worldserver" ]]; then
+  echo "OK: world binary: $CURRENT_LINK/bin/worldserver"
+else
+  echo "WARN: world binary missing: $CURRENT_LINK/bin/worldserver"
 fi
 
 log "Services"

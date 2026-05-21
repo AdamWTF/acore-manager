@@ -14,6 +14,8 @@ The service templates in `systemd/` point at:
 /opt/acore-manager/current/bin/worldserver
 ```
 
+`/opt/acore-manager/current` is the only active runtime path. `/opt/acore-manager/build/staging` is temporary build output and must not be used by systemd services, runtime scripts, or user-managed configs.
+
 Bootstrap installs these templates when possible, but does not enable or start them. If needed, install them manually:
 
 ```bash
@@ -52,6 +54,15 @@ ls -l /opt/acore-manager/current/etc
 readlink -f /opt/acore-manager/current/etc/worldserver.conf
 readlink -f /opt/acore-manager/current/etc/modules
 ```
+
+Check for old systemd units that still reference staging:
+
+```bash
+sudo ./bin/acore-manager fix-runtime-paths
+sudo ./bin/acore-manager fix-runtime-paths --apply
+```
+
+The `--apply` mode backs up affected unit files, installs the current-based templates, and runs `systemctl daemon-reload`. It does not restart services.
 
 ## Service Control
 

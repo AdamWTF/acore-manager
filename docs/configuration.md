@@ -132,3 +132,5 @@ Expected links:
 ```text
 /opt/acore-manager/shared/data
 ```
+
+Do not edit or run files from `/opt/acore-manager/build/staging`. That path is temporary build output. Runtime config resolution should flow through `/opt/acore-manager/current/etc`.

@@ -61,6 +61,7 @@ Direct release script not exposed by the wrapper:
 | `restart` | Stop world/auth, then start auth/world. | `scripts/runtime/acore-restart.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart` |
 | `restart-world` | Restart world service only. | `scripts/runtime/acore-restart-world.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart-world` |
 | `restart-auth` | Restart auth service only. | `scripts/runtime/acore-restart-auth.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart-auth` |
+| `fix-runtime-paths` | Check installed systemd units for `build/staging` runtime paths; `--apply` reinstalls current-based templates. | `scripts/runtime/acore-fix-runtime-paths.sh` | Yes | Safe without `--apply`; disruptive config change with `--apply` | `sudo ./bin/acore-manager fix-runtime-paths --apply` |
 
 ## Logs And Status
 

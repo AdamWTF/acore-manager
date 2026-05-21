@@ -41,6 +41,8 @@ Use the CLI wrapper for common actions:
 
 Creating a release does not mean the server is running. A real first setup still needs client data files, `authserver.conf` and `worldserver.conf`, databases, installed systemd services, and firewall/client checks. Follow the complete guide before switching a first production release.
 
+`/opt/acore-manager/build/staging` is temporary build output only. The active runtime is always `/opt/acore-manager/current`, which points to a versioned release under `/opt/acore-manager/releases`.
+
 Minimal operational flow:
 
 ```bash

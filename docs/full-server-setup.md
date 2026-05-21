@@ -23,7 +23,7 @@ Important paths:
 /opt/acore-manager/source/azerothcore      AzerothCore git checkout
 /opt/acore-manager/source/azerothcore/modules
 /opt/acore-manager/build                   CMake build directory
-/opt/acore-manager/build/staging           staged install output
+/opt/acore-manager/build/staging           temporary staged install output
 /opt/acore-manager/releases                timestamped releases
 /opt/acore-manager/current                 symlink to active release
 /opt/acore-manager/shared                  shared runtime files
@@ -37,6 +37,8 @@ config/local                               local gitignored config
 ```
 
 `SOURCE_ROOT` is `/opt/acore-manager/source`. The actual AzerothCore checkout is `ACORE_SOURCE_DIR`, `/opt/acore-manager/source/azerothcore`.
+
+The active runtime path is always `/opt/acore-manager/current`. Do not run services from `/opt/acore-manager/build/staging`; it is recreated during builds and can be deleted after a release is created.
 
 ## Bootstrap
 
@@ -154,7 +156,7 @@ The build uses `/opt/acore-manager/build` and installs staged artifacts into:
 /opt/acore-manager/build/staging
 ```
 
-Building does not replace the running server, switch `/opt/acore-manager/current`, or restart services.
+Building does not replace the running server, switch `/opt/acore-manager/current`, or restart services. Staging is not a live server path.
 
 Use `CMAKE_EXTRA_FLAGS` in `config/local/manager.conf` for local CMake options, for example:
 
@@ -175,6 +177,8 @@ This copies `/opt/acore-manager/build/staging` into a timestamped release under:
 ```text
 /opt/acore-manager/releases/<timestamp>
 ```
+
+After release creation, runtime uses the release through `/opt/acore-manager/current`. Deleting or recreating `/opt/acore-manager/build/staging` must not break the running server.
 
 It also writes:
 
@@ -398,6 +402,8 @@ readlink -f /opt/acore-manager/current
 readlink -f /opt/acore-manager/current/etc/worldserver.conf
 readlink -f /opt/acore-manager/current/etc/modules
 ```
+
+If `readlink -f /opt/acore-manager/current` resolves to `/opt/acore-manager/build/staging`, fix the release switch before starting services.
 
 ## Start Services
 

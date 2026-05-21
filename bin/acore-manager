@@ -36,6 +36,7 @@ Commands:
   link-configs     Link shared configs into the active release
   check-data       Check required AzerothCore data directories
   validate-runtime Validate active release, shared config links, and data
+  fix-runtime-paths Check/fix installed systemd units that reference staging
 EOF
 }
 
@@ -74,6 +75,7 @@ script_for_command() {
     link-configs) echo "scripts/config/acore-link-shared-configs.sh" ;;
     check-data) echo "scripts/config/acore-check-data.sh" ;;
     validate-runtime) echo "scripts/config/acore-validate-runtime.sh" ;;
+    fix-runtime-paths) echo "scripts/runtime/acore-fix-runtime-paths.sh" ;;
     *) return 1 ;;
   esac
 }

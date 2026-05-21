@@ -64,6 +64,14 @@ bin/worldserver
 
 Confirm systemd templates match your configured user, group, and install root.
 
+Confirm services run from `/opt/acore-manager/current`, not build staging:
+
+```bash
+systemctl cat azerothcore-auth.service
+systemctl cat azerothcore-world.service
+sudo ./bin/acore-manager fix-runtime-paths
+```
+
 Also confirm client data exists:
 
 ```text
@@ -139,6 +147,36 @@ Then check:
 ```bash
 ./bin/acore-manager check-data
 ```
+
+## Services Are Running From build/staging Instead Of current
+
+Symptoms:
+
+- release switch appears to do nothing
+- rollback does not affect running binaries
+- config symlinks are missing
+- services cannot find shared configs
+- deleting `build/staging` breaks runtime
+
+Checks:
+
+```bash
+systemctl cat azerothcore-auth.service
+systemctl cat azerothcore-world.service
+readlink -f /opt/acore-manager/current
+ls -l /opt/acore-manager/current/bin
+grep -R "build/staging" /etc/systemd/system /opt/acore-manager
+```
+
+Fix installed acore-manager service templates:
+
+```bash
+sudo ./bin/acore-manager fix-runtime-paths
+sudo ./bin/acore-manager fix-runtime-paths --apply
+sudo ./bin/acore-manager validate-runtime
+```
+
+The fix script reloads systemd but does not restart services. Restart or switch releases explicitly when ready.
 
 ## Client Cannot Connect
 

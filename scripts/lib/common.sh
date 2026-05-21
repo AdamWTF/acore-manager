@@ -36,6 +36,7 @@ SOURCE_DIR="$ACORE_SOURCE_DIR"
 BUILD_DIR="$ACM_ROOT/build"
 RELEASES_DIR="$ACM_ROOT/releases"
 CURRENT_LINK="$ACM_ROOT/current"
+CURRENT_DIR="$CURRENT_LINK"
 SHARED_DIR="$ACM_ROOT/shared"
 BACKUP_DIR="$ACM_ROOT/backups"
 MODULE_CONFIG_DIR="$CONFIG_DIR/modules"
@@ -51,4 +52,34 @@ log() {
 die() {
   echo "Error: $*" >&2
   exit 1
+}
+
+validate_current_runtime() {
+  local current_target
+
+  [[ -L "$CURRENT_LINK" ]] || die "CURRENT_LINK is not a symlink: $CURRENT_LINK
+Create a release, list releases, then switch to one:
+  ./bin/acore-manager create-release
+  ./bin/acore-manager list-releases
+  sudo ./bin/acore-manager switch-release <release-name>"
+
+  current_target="$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)"
+  [[ -n "$current_target" && -d "$current_target" ]] || die "CURRENT_LINK does not point to a release: $CURRENT_LINK"
+
+  case "$current_target" in
+    "$BUILD_DIR"/staging|"$BUILD_DIR"/staging/*)
+      die "CURRENT_LINK points to build staging, which is not a runtime path: $current_target"
+      ;;
+  esac
+
+  case "$current_target" in
+    "$RELEASES_DIR"/*)
+      ;;
+    *)
+      die "CURRENT_LINK must point under RELEASES_DIR ($RELEASES_DIR), got: $current_target"
+      ;;
+  esac
+
+  [[ -x "$CURRENT_LINK/bin/authserver" ]] || die "authserver is missing or not executable: $CURRENT_LINK/bin/authserver"
+  [[ -x "$CURRENT_LINK/bin/worldserver" ]] || die "worldserver is missing or not executable: $CURRENT_LINK/bin/worldserver"
 }

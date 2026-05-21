@@ -33,6 +33,19 @@ if [[ -L "$CURRENT_LINK" ]]; then
   current_target="$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)"
   if [[ -n "$current_target" && -d "$current_target" ]]; then
     echo "OK: active release: $current_target"
+    case "$current_target" in
+      "$BUILD_DIR"/staging|"$BUILD_DIR"/staging/*)
+        echo "ERROR: CURRENT_LINK points to build staging, not a release: $current_target"
+        errors=$((errors + 1))
+        ;;
+      "$RELEASES_DIR"/*)
+        echo "OK: CURRENT_LINK points under releases"
+        ;;
+      *)
+        echo "ERROR: CURRENT_LINK must point under $RELEASES_DIR, got: $current_target"
+        errors=$((errors + 1))
+        ;;
+    esac
   else
     echo "ERROR: CURRENT_LINK cannot be resolved: $CURRENT_LINK"
     errors=$((errors + 1))
@@ -41,6 +54,16 @@ else
   echo "ERROR: CURRENT_LINK is not a symlink: $CURRENT_LINK"
   errors=$((errors + 1))
 fi
+
+log "Runtime binaries"
+for binary in authserver worldserver; do
+  if [[ -x "$CURRENT_LINK/bin/$binary" ]]; then
+    echo "OK: runtime binary exists: $CURRENT_LINK/bin/$binary"
+  else
+    echo "ERROR: runtime binary missing or not executable: $CURRENT_LINK/bin/$binary"
+    errors=$((errors + 1))
+  fi
+done
 
 log "Shared configs"
 for path in "$CONFIG_DIR/authserver.conf" "$CONFIG_DIR/worldserver.conf" "$MODULE_CONFIG_DIR"; do

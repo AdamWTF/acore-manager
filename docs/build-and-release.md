@@ -40,7 +40,7 @@ Build output is installed into:
 
 `BUILD_THREADS="auto"` uses `nproc` when available.
 
-The build step does not switch the active release and does not restart services.
+The build step does not switch the active release and does not restart services. `build/staging` is temporary packaging output only; do not run services from it and do not edit runtime configs there.
 
 ## Create Release
 
@@ -53,6 +53,8 @@ This copies `BUILD_DIR/staging` into:
 ```text
 RELEASES_DIR/<timestamp>
 ```
+
+After this copy, the release under `RELEASES_DIR/<timestamp>` is the versioned artifact. The staging directory can be deleted or recreated by later builds without affecting the active server, as long as `/opt/acore-manager/current` points to a release.
 
 It also writes:
 
@@ -103,7 +105,7 @@ Switching validates the release, updates:
 /opt/acore-manager/current
 ```
 
-and restarts services in the safe order: stop world, stop auth, start auth, start world.
+and restarts services in the safe order: stop world, stop auth, start auth, start world. `current` must never point at `/opt/acore-manager/build/staging`.
 
 On a first server, prepare data files and configs before switching, because `switch-release` starts services. During switch, `acore-manager` relinks shared configs into the new active release before starting services:
 
