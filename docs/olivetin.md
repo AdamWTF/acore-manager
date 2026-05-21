@@ -165,6 +165,18 @@ systemctl status OliveTin --no-pager
 
 If using a non-root service user, review `olivetin/acore-manager.sudoers.example`.
 
+### Runtime Still Uses build/staging
+
+OliveTin buttons call `bin/acore-manager`, but systemd may still have older installed unit files that point at build staging. Check and fix them on the server:
+
+```bash
+sudo /opt/acore-manager/bin/acore-manager fix-runtime-paths
+sudo /opt/acore-manager/bin/acore-manager fix-runtime-paths --apply
+sudo /opt/acore-manager/bin/acore-manager validate-runtime
+```
+
+Then retry the OliveTin action. The fix reloads systemd but does not restart services.
+
 ### acore-manager Script Not Executable
 
 ```bash

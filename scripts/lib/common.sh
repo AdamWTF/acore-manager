@@ -83,3 +83,33 @@ Create a release, list releases, then switch to one:
   [[ -x "$CURRENT_LINK/bin/authserver" ]] || die "authserver is missing or not executable: $CURRENT_LINK/bin/authserver"
   [[ -x "$CURRENT_LINK/bin/worldserver" ]] || die "worldserver is missing or not executable: $CURRENT_LINK/bin/worldserver"
 }
+
+validate_systemd_runtime_path() {
+  local service="$1"
+  local unit_text
+
+  command -v systemctl >/dev/null 2>&1 || die "systemctl is not available"
+
+  unit_text="$(systemctl cat "$service" 2>/dev/null || true)"
+  if [[ -z "$unit_text" ]]; then
+    die "systemd unit is not installed or cannot be read: $service"
+  fi
+
+  if grep -q 'build/staging' <<<"$unit_text"; then
+    die "systemd unit $service still points at build/staging.
+Fix installed service templates before starting or restarting services:
+  sudo ./bin/acore-manager fix-runtime-paths
+  sudo ./bin/acore-manager fix-runtime-paths --apply
+Then restart explicitly when ready."
+  fi
+
+  if ! grep -q "$CURRENT_LINK/bin/" <<<"$unit_text"; then
+    echo "WARN: systemd unit $service does not reference $CURRENT_LINK/bin"
+    echo "      Review with: systemctl cat $service"
+  fi
+}
+
+validate_systemd_runtime_paths() {
+  validate_systemd_runtime_path "$AUTH_SERVICE"
+  validate_systemd_runtime_path "$WORLD_SERVICE"
+}

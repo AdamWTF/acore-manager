@@ -82,6 +82,23 @@ if [[ -L "$CURRENT_LINK" ]]; then
   warn_or_error_link "$CURRENT_LINK/etc/modules" "$MODULE_CONFIG_DIR"
 fi
 
+log "Systemd runtime paths"
+for service in "$AUTH_SERVICE" "$WORLD_SERVICE"; do
+  unit_text="$(systemctl cat "$service" 2>/dev/null || true)"
+  if [[ -z "$unit_text" ]]; then
+    echo "ERROR: systemd unit is missing or unreadable: $service"
+    errors=$((errors + 1))
+  elif grep -q 'build/staging' <<<"$unit_text"; then
+    echo "ERROR: systemd unit still references build/staging: $service"
+    echo "Fix with: sudo ./bin/acore-manager fix-runtime-paths --apply"
+    errors=$((errors + 1))
+  elif grep -q "$CURRENT_LINK/bin/" <<<"$unit_text"; then
+    echo "OK: systemd unit uses current runtime path: $service"
+  else
+    echo "WARN: systemd unit does not reference $CURRENT_LINK/bin: $service"
+  fi
+done
+
 "$SCRIPT_DIR/acore-check-data.sh" || true
 
 if [[ "$errors" -gt 0 ]]; then

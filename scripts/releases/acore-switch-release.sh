@@ -15,6 +15,7 @@ release_dir="$RELEASES_DIR/$release_name"
 [[ -d "$release_dir" ]] || die "release does not exist: $release_dir"
 [[ -x "$release_dir/bin/authserver" ]] || die "authserver is not executable in release: $release_dir/bin/authserver"
 [[ -x "$release_dir/bin/worldserver" ]] || die "worldserver is not executable in release: $release_dir/bin/worldserver"
+validate_systemd_runtime_paths
 
 log "Switching active release"
 echo "Release: $release_name"

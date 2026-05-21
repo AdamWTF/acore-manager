@@ -64,6 +64,8 @@ sudo ./bin/acore-manager fix-runtime-paths --apply
 
 The `--apply` mode backs up affected unit files, installs the current-based templates, and runs `systemctl daemon-reload`. It does not restart services.
 
+Runtime start and restart commands check installed systemd units before touching services. If a unit still references `build/staging`, the command fails and tells you to run `fix-runtime-paths` first.
+
 ## Service Control
 
 ```bash

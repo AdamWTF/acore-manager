@@ -7,6 +7,7 @@ source "$SCRIPT_DIR/../lib/common.sh"
 
 command -v systemctl >/dev/null 2>&1 || die "systemctl is not available"
 validate_current_runtime
+validate_systemd_runtime_paths
 
 log "Restarting AzerothCore services"
 

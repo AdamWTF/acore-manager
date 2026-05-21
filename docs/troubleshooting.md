@@ -178,6 +178,8 @@ sudo ./bin/acore-manager validate-runtime
 
 The fix script reloads systemd but does not restart services. Restart or switch releases explicitly when ready.
 
+If this happens from OliveTin, the button is usually calling the correct `acore-manager` command, but the installed systemd unit is stale. Run the same `fix-runtime-paths` commands on the server, then press the OliveTin restart button again.
+
 ## Client Cannot Connect
 
 Check the client realmlist, firewall, and ports:
