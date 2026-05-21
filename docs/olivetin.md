@@ -20,6 +20,8 @@ scripts/integrations/acore-validate-olivetin-config.sh
 
 The example config includes buttons for status, logs, service restarts, backups, build/release actions, and rollback. Long-running or dangerous actions include confirmation prompts where OliveTin supports them.
 
+The example also sets explicit per-action timeouts. OliveTin defaults actions to 3 seconds, which is too short for log review, service restarts, backups, builds, and release workflows.
+
 ## Validate The Example
 
 From the repo:

@@ -20,56 +20,67 @@ actions:
     id: acore_status
     icon: "📊"
     shell: "/opt/acore-manager/bin/acore-manager status"
+    timeout: 30
 
   - title: List releases
     id: acore_list_releases
     icon: "📦"
     shell: "/opt/acore-manager/bin/acore-manager list-releases"
+    timeout: 30
 
   - title: View world logs
     id: acore_logs_world
     icon: "📜"
     shell: "/opt/acore-manager/bin/acore-manager logs-world"
+    timeout: 300
 
   - title: View auth logs
     id: acore_logs_auth
     icon: "📜"
     shell: "/opt/acore-manager/bin/acore-manager logs-auth"
+    timeout: 300
 
   - title: View recent errors
     id: acore_last_errors
     icon: "📜"
     shell: "/opt/acore-manager/bin/acore-manager last-errors"
+    timeout: 60
 
   - title: Check database
     id: acore_db_check
     icon: "🗄️"
     shell: "/opt/acore-manager/bin/acore-manager db-check"
+    timeout: 60
 
   - title: Restart worldserver
     id: acore_restart_world
     icon: "🔄"
     shell: "/opt/acore-manager/bin/acore-manager restart-world"
+    timeout: 120
 
   - title: Restart authserver
     id: acore_restart_auth
     icon: "🔄"
     shell: "/opt/acore-manager/bin/acore-manager restart-auth"
+    timeout: 120
 
   - title: Restart all AzerothCore services
     id: acore_restart_all
     icon: "🔄"
     shell: "/opt/acore-manager/bin/acore-manager restart"
+    timeout: 180
 
   - title: Start services
     id: acore_start
     icon: "▶️"
     shell: "/opt/acore-manager/bin/acore-manager start"
+    timeout: 120
 
   - title: Stop services - requires confirmation
     id: acore_stop
     icon: "⏹️"
     shell: "/opt/acore-manager/bin/acore-manager stop"
+    timeout: 120
     arguments:
       - type: confirmation
         title: Confirm stopping authserver and worldserver.
@@ -78,11 +89,13 @@ actions:
     id: acore_config_backup
     icon: "💾"
     shell: "/opt/acore-manager/bin/acore-manager config-backup"
+    timeout: 120
 
   - title: Database backup - requires confirmation
     id: acore_db_backup
     icon: "💾"
     shell: "/opt/acore-manager/bin/acore-manager db-backup"
+    timeout: 1800
     arguments:
       - type: confirmation
         title: Confirm database backup. This may run for a while.
@@ -91,6 +104,7 @@ actions:
     id: acore_build
     icon: "🛠️"
     shell: "/opt/acore-manager/bin/acore-manager build"
+    timeout: 14400
     arguments:
       - type: confirmation
         title: Confirm starting an AzerothCore build. This can take a long time.
@@ -99,11 +113,13 @@ actions:
     id: acore_create_release
     icon: "📦"
     shell: "/opt/acore-manager/bin/acore-manager create-release"
+    timeout: 600
 
   - title: Release latest - requires confirmation
     id: acore_release_latest
     icon: "🚀"
     shell: "/opt/acore-manager/bin/acore-manager release-latest"
+    timeout: 21600
     arguments:
       - type: confirmation
         title: Confirm full update/build/release/switch workflow.
@@ -112,6 +128,7 @@ actions:
     id: acore_rollback
     icon: "↩️"
     shell: "/opt/acore-manager/bin/acore-manager rollback"
+    timeout: 300
     arguments:
       - type: confirmation
         title: Confirm rollback to the previous release.
