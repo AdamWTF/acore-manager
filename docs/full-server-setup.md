@@ -158,6 +158,8 @@ The build uses `/opt/acore-manager/build` and installs staged artifacts into:
 
 Building does not replace the running server, switch `/opt/acore-manager/current`, or restart services. Staging is not a live server path.
 
+AzerothCore is configured with runtime prefix `/opt/acore-manager/current` while the install is staged under `/opt/acore-manager/build/staging`. This keeps compiled config lookup paths aligned with the active release instead of the temporary staging directory.
+
 Use `CMAKE_EXTRA_FLAGS` in `config/local/manager.conf` for local CMake options, for example:
 
 ```bash

@@ -180,6 +180,15 @@ The fix script reloads systemd but does not restart services. Restart or switch 
 
 If this happens from OliveTin, the button is usually calling the correct `acore-manager` command, but the installed systemd unit is stale. Run the same `fix-runtime-paths` commands on the server, then press the OliveTin restart button again.
 
+If logs still show `Config::LoadFile` looking under `/opt/acore-manager/build/staging/etc`, the existing binaries were built with the old staging install prefix baked in. Rebuild and create a new release with the updated build script:
+
+```bash
+./bin/acore-manager build
+./bin/acore-manager create-release
+sudo ./bin/acore-manager prepare-configs <new-release>
+sudo ./bin/acore-manager switch-release <new-release>
+```
+
 ## Client Cannot Connect
 
 Check the client realmlist, firewall, and ports:

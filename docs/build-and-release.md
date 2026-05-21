@@ -42,6 +42,14 @@ Build output is installed into:
 
 The build step does not switch the active release and does not restart services. `build/staging` is temporary packaging output only; do not run services from it and do not edit runtime configs there.
 
+The build configures AzerothCore with this runtime install prefix:
+
+```text
+/opt/acore-manager/current
+```
+
+and stages the install under `/opt/acore-manager/build/staging` for release packaging. This prevents binaries from looking for configs under `build/staging/etc`.
+
 ## Create Release
 
 ```bash

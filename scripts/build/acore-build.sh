@@ -12,11 +12,13 @@ command -v make >/dev/null 2>&1 || die "make is not available"
 [[ -f "$ACORE_SOURCE_DIR/CMakeLists.txt" ]] || die "ACORE_SOURCE_DIR does not look like an AzerothCore source tree: $ACORE_SOURCE_DIR"
 
 STAGING_DIR="$BUILD_DIR/staging"
+STAGING_ROOT="$BUILD_DIR/staging-root"
+RUNTIME_INSTALL_PREFIX="$CURRENT_LINK"
 cmake_args=(
   -S "$ACORE_SOURCE_DIR"
   -B "$BUILD_DIR"
   -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
-  -DCMAKE_INSTALL_PREFIX="$STAGING_DIR"
+  -DCMAKE_INSTALL_PREFIX="$RUNTIME_INSTALL_PREFIX"
 )
 
 if [[ -n "${CMAKE_EXTRA_FLAGS:-}" ]]; then
@@ -56,6 +58,9 @@ print_failure_context() {
   echo "CMake flags used:"
   printf '  %q\n' "${cmake_args[@]}"
   echo
+  echo "Runtime install prefix: $RUNTIME_INSTALL_PREFIX"
+  echo "Packaging staging directory: $STAGING_DIR"
+  echo
   echo "See docs/troubleshooting.md for known build issues and workarounds."
 }
 
@@ -78,7 +83,9 @@ fi
 log "Preparing build directories"
 mkdir -p "$BUILD_DIR"
 rm -rf "$STAGING_DIR"
+rm -rf "$STAGING_ROOT"
 mkdir -p "$STAGING_DIR"
+mkdir -p "$STAGING_ROOT"
 
 log "Configuring AzerothCore"
 run_build_step cmake "${cmake_args[@]}"
@@ -87,8 +94,18 @@ log "Building AzerothCore"
 run_build_step cmake --build "$BUILD_DIR" --parallel "$build_threads"
 
 log "Installing into staging"
-run_build_step cmake --install "$BUILD_DIR"
+run_build_step env DESTDIR="$STAGING_ROOT" cmake --install "$BUILD_DIR"
+
+staged_prefix="$STAGING_ROOT$RUNTIME_INSTALL_PREFIX"
+[[ -d "$staged_prefix" ]] || die "expected staged runtime prefix was not created: $staged_prefix"
+
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a "$staged_prefix/" "$STAGING_DIR/"
+else
+  cp -a "$staged_prefix/." "$STAGING_DIR/"
+fi
 
 echo
 echo "Build completed successfully."
 echo "Staging directory: $STAGING_DIR"
+echo "Runtime install prefix baked into build: $RUNTIME_INSTALL_PREFIX"
