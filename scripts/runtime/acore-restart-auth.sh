@@ -10,6 +10,7 @@ validate_current_runtime
 validate_systemd_runtime_path "$AUTH_SERVICE"
 
 log "Restarting auth service"
+sleep_thaw_if_enabled
 
 echo "Restarting auth service: $AUTH_SERVICE"
 systemctl restart "$AUTH_SERVICE" || die "failed to restart auth service: $AUTH_SERVICE"

@@ -69,6 +69,7 @@ Minimal operational flow:
 - [Modules](docs/modules.md)
 - [Build and Release](docs/build-and-release.md)
 - [Runtime](docs/runtime.md)
+- [Idle Sleep](docs/power-sleep.md)
 - [Rollback](docs/rollback.md)
 - [Database Backups](docs/database-backups.md)
 - [OliveTin](docs/olivetin.md)

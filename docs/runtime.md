@@ -43,6 +43,7 @@ Runtime configs are shared and linked into the active release:
 ```bash
 ./bin/acore-manager status
 ./bin/acore-manager validate-runtime
+./bin/acore-manager sleep-status
 ```
 
 Shows active release, service status, common ports, disk usage, memory usage, and source commit information.
@@ -121,6 +122,8 @@ Common AzerothCore ports:
 3724  authserver
 8085  worldserver
 ```
+
+With idle sleep enabled, the sleep proxy listens on public auth port `3724` and forwards to the real authserver on backend port `3725`. See [Idle Sleep](power-sleep.md).
 
 Check listeners:
 

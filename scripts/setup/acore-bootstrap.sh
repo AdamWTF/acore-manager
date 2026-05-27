@@ -69,10 +69,13 @@ install_packages() {
     openssh-client \
     default-mysql-client \
     default-libmysqlclient-dev \
+    iproute2 \
     libssl-dev \
     libboost-all-dev \
     libreadline-dev \
     libncurses-dev \
+    procps \
+    socat \
     zlib1g-dev \
     libbz2-dev \
     systemd
@@ -187,10 +190,76 @@ install_systemd_templates() {
     "$ACM_REPO_ROOT/systemd/azerothcore-world.service" \
     "$WORLD_SERVICE"
 
+  install_service_template \
+    "$ACM_REPO_ROOT/systemd/acore-sleep-monitor.service" \
+    "acore-sleep-monitor.service"
+
+  install_service_template \
+    "$ACM_REPO_ROOT/systemd/acore-sleep-proxy.service" \
+    "acore-sleep-proxy.service"
+
   if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload
   else
     echo "WARN: systemctl is not available; skipped daemon-reload"
+  fi
+}
+
+configured_realm_port() {
+  local auth_conf="$CONFIG_DIR/authserver.conf"
+
+  [[ -f "$auth_conf" ]] || return 0
+  awk -F= '
+    /^[[:space:]]*RealmServerPort[[:space:]]*=/ {
+      value = $2
+      sub(/[[:space:]]*.*/, "", value)
+      gsub(/"/, "", value)
+      print value
+      exit
+    }
+  ' "$auth_conf"
+}
+
+sleep_services_ready_to_start() {
+  local realm_port
+
+  sleep_enabled || return 1
+  [[ "${AUTH_PUBLIC_PORT:-}" != "${AUTH_BACKEND_PORT:-}" ]] || return 1
+
+  realm_port="$(configured_realm_port)"
+  [[ -n "$realm_port" && "$realm_port" == "$AUTH_BACKEND_PORT" ]] || return 1
+
+  if command -v ss >/dev/null 2>&1; then
+    if ss -ltn "sport = :$AUTH_PUBLIC_PORT" 2>/dev/null | awk 'NR > 1 { found = 1 } END { exit !found }'; then
+      return 1
+    fi
+  fi
+
+  return 0
+}
+
+enable_sleep_services() {
+  if ! sleep_enabled; then
+    echo "Sleep services are disabled by config; skipped enable/start."
+    return
+  fi
+
+  if ! command -v systemctl >/dev/null 2>&1; then
+    echo "WARN: systemctl is not available; skipped sleep service enable/start"
+    return
+  fi
+
+  log "Enabling idle sleep services"
+  systemctl enable acore-sleep-proxy.service
+  systemctl enable acore-sleep-monitor.service
+
+  if sleep_services_ready_to_start; then
+    echo "Sleep port setup looks ready; starting sleep services."
+    systemctl start acore-sleep-proxy.service
+    systemctl start acore-sleep-monitor.service
+  else
+    echo "Sleep services enabled but not started yet."
+    echo "Before starting them, set authserver.conf RealmServerPort to $AUTH_BACKEND_PORT and ensure port $AUTH_PUBLIC_PORT is free for the proxy."
   fi
 }
 
@@ -224,7 +293,9 @@ Next steps:
      $ACM_REPO_ROOT/scripts/config/acore-check-data.sh
      $ACM_REPO_ROOT/scripts/releases/acore-switch-release.sh <release-name>
 
-Services were installed as templates only. They were not enabled or started.
+Auth/world services were installed as templates only. They were not enabled or started.
+Idle sleep services are enabled by default when SLEEP_ENABLED is true. They are
+started only after authserver.conf is ready for the proxy/backend port split.
 EOF
 }
 
@@ -236,4 +307,5 @@ ensure_user
 ensure_directories
 install_local_config_examples
 install_systemd_templates
+enable_sleep_services
 print_next_steps

@@ -10,6 +10,7 @@ validate_current_runtime
 validate_systemd_runtime_paths
 
 log "Restarting AzerothCore services"
+sleep_thaw_if_enabled
 
 echo "Stopping world service: $WORLD_SERVICE"
 systemctl stop "$WORLD_SERVICE" || die "failed to stop world service: $WORLD_SERVICE"

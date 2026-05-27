@@ -61,6 +61,9 @@ Direct release script not exposed by the wrapper:
 | `restart` | Stop world/auth, then start auth/world. | `scripts/runtime/acore-restart.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart` |
 | `restart-world` | Restart world service only. | `scripts/runtime/acore-restart-world.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart-world` |
 | `restart-auth` | Restart auth service only. | `scripts/runtime/acore-restart-auth.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart-auth` |
+| `sleep-status` | Show idle sleep config, services, ports, world connections, and process state. | `scripts/power/acore-sleep-status.sh` | Sometimes for full service details | Read-only | `./bin/acore-manager sleep-status` |
+| `sleep-thaw` | Resume frozen auth/world processes. | `scripts/power/acore-sleep-thaw.sh` | Usually yes | Safe | `sudo ./bin/acore-manager sleep-thaw` |
+| `sleep-freeze` | Freeze auth/world processes immediately. | `scripts/power/acore-sleep-freeze.sh` | Usually yes | Disruptive | `sudo ./bin/acore-manager sleep-freeze` |
 | `fix-runtime-paths` | Check installed systemd units for `build/staging` runtime paths; `--apply` reinstalls current-based templates. | `scripts/runtime/acore-fix-runtime-paths.sh` | Yes | Safe without `--apply`; disruptive config change with `--apply` | `sudo ./bin/acore-manager fix-runtime-paths --apply` |
 
 ## Logs And Status
@@ -95,6 +98,8 @@ These scripts are optional and are not required for core server management.
 | `scripts/integrations/acore-validate-olivetin-config.sh` | Check OliveTin example commands exist in `bin/acore-manager`. | No | Read-only | `./scripts/integrations/acore-validate-olivetin-config.sh` |
 | `scripts/integrations/acore-render-olivetin-config.sh` | Back up and install `/etc/OliveTin/config.yaml`. | Yes | Safe | `sudo ./scripts/integrations/acore-render-olivetin-config.sh` |
 | `scripts/integrations/acore-install-olivetin.sh` | Install OliveTin, render config, enable and start OliveTin. | Yes | Disruptive | `sudo ./scripts/integrations/acore-install-olivetin.sh` |
+
+See [Idle Sleep](power-sleep.md) for the default sleep proxy and monitor services.
 
 ## Troubleshooting Gaps
 

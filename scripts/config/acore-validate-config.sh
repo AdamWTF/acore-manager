@@ -63,6 +63,31 @@ check_file_warn() {
   fi
 }
 
+warn_missing_cmd() {
+  local name="$1"
+
+  if command -v "$name" >/dev/null 2>&1; then
+    echo "OK: command found: $name"
+  else
+    echo "WARN: command missing: $name"
+  fi
+}
+
+configured_realm_port() {
+  local auth_conf="$CONFIG_DIR/authserver.conf"
+
+  [[ -f "$auth_conf" ]] || return 0
+  awk -F= '
+    /^[[:space:]]*RealmServerPort[[:space:]]*=/ {
+      value = $2
+      sub(/[[:space:]]*.*/, "", value)
+      gsub(/"/, "", value)
+      print value
+      exit
+    }
+  ' "$auth_conf"
+}
+
 check_active_config_links() {
   if [[ ! -L "$CURRENT_LINK" ]]; then
     echo "WARN: CURRENT_LINK is not set yet: $CURRENT_LINK"
@@ -113,6 +138,51 @@ check_data_dirs() {
   done
 }
 
+check_sleep_config() {
+  log "Idle Sleep"
+
+  if ! sleep_enabled; then
+    echo "OK: sleep mode is disabled"
+    return
+  fi
+
+  echo "OK: sleep mode is enabled"
+
+  for name in \
+    SLEEP_CHECK_INTERVAL \
+    SLEEP_IDLE_TIMEOUT \
+    AUTH_PUBLIC_PORT \
+    AUTH_BACKEND_PORT \
+    AUTH_BACKEND_HOST \
+    SLEEP_PROXY_BIND_HOST \
+    WORLD_PORTS \
+    SLEEP_STATE_DIR; do
+    require_var "$name"
+  done
+
+  for name in socat ss pgrep ps logger; do
+    warn_missing_cmd "$name"
+  done
+
+  if [[ "${AUTH_PUBLIC_PORT:-}" == "${AUTH_BACKEND_PORT:-}" ]]; then
+    echo "WARN: AUTH_PUBLIC_PORT and AUTH_BACKEND_PORT are the same; the sleep proxy needs separate public and backend ports"
+  fi
+
+  local realm_port
+  realm_port="$(configured_realm_port)"
+  if [[ -z "$realm_port" ]]; then
+    echo "WARN: unable to confirm RealmServerPort in $CONFIG_DIR/authserver.conf"
+    echo "      For sleep mode, authserver should listen on AUTH_BACKEND_PORT ($AUTH_BACKEND_PORT), while the proxy listens on AUTH_PUBLIC_PORT ($AUTH_PUBLIC_PORT)."
+  elif [[ "$realm_port" == "$AUTH_PUBLIC_PORT" ]]; then
+    echo "WARN: authserver.conf RealmServerPort is still the public proxy port ($AUTH_PUBLIC_PORT)"
+    echo "      Change it to AUTH_BACKEND_PORT ($AUTH_BACKEND_PORT) before starting the sleep proxy."
+  elif [[ "$realm_port" == "$AUTH_BACKEND_PORT" ]]; then
+    echo "OK: authserver.conf RealmServerPort uses backend port: $AUTH_BACKEND_PORT"
+  else
+    echo "WARN: authserver.conf RealmServerPort is $realm_port, expected AUTH_BACKEND_PORT ($AUTH_BACKEND_PORT)"
+  fi
+}
+
 log "Required Variables"
 for name in \
   ACM_ROOT \
@@ -122,6 +192,7 @@ for name in \
   ACORE_GROUP \
   AUTH_SERVICE \
   WORLD_SERVICE \
+  SLEEP_ENABLED \
   MYSQL_HOST \
   MYSQL_PORT \
   MYSQL_AUTH_DB \
@@ -150,6 +221,7 @@ check_file_warn "authserver.conf" "$CONFIG_DIR/authserver.conf"
 check_file_warn "worldserver.conf" "$CONFIG_DIR/worldserver.conf"
 check_active_config_links
 check_data_dirs
+check_sleep_config
 
 log "Services"
 require_var AUTH_SERVICE

@@ -19,6 +19,9 @@ Cmnd_Alias ACORE_MANAGER = \
   /opt/acore-manager/bin/acore-manager logs-world, \
   /opt/acore-manager/bin/acore-manager logs-auth, \
   /opt/acore-manager/bin/acore-manager last-errors, \
+  /opt/acore-manager/bin/acore-manager sleep-status, \
+  /opt/acore-manager/bin/acore-manager sleep-thaw, \
+  /opt/acore-manager/bin/acore-manager sleep-freeze, \
   /opt/acore-manager/bin/acore-manager db-check, \
   /opt/acore-manager/bin/acore-manager restart-world, \
   /opt/acore-manager/bin/acore-manager restart-auth, \

@@ -10,6 +10,7 @@ validate_current_runtime
 validate_systemd_runtime_path "$WORLD_SERVICE"
 
 log "Restarting world service"
+sleep_thaw_if_enabled
 
 echo "Restarting world service: $WORLD_SERVICE"
 systemctl restart "$WORLD_SERVICE" || die "failed to restart world service: $WORLD_SERVICE"

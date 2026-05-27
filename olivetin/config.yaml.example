@@ -52,6 +52,27 @@ actions:
     shell: "/opt/acore-manager/bin/acore-manager db-check"
     timeout: 60
 
+  - title: Sleep status
+    id: acore_sleep_status
+    icon: "📊"
+    shell: "/opt/acore-manager/bin/acore-manager sleep-status"
+    timeout: 30
+
+  - title: Wake sleeping server
+    id: acore_sleep_thaw
+    icon: "▶️"
+    shell: "/opt/acore-manager/bin/acore-manager sleep-thaw"
+    timeout: 30
+
+  - title: Sleep server now - requires confirmation
+    id: acore_sleep_freeze
+    icon: "⏸️"
+    shell: "/opt/acore-manager/bin/acore-manager sleep-freeze"
+    timeout: 30
+    arguments:
+      - type: confirmation
+        title: Confirm freezing authserver and worldserver.
+
   - title: Restart worldserver
     id: acore_restart_world
     icon: "🔄"
@@ -145,10 +166,13 @@ dashboards:
           - title: View auth logs
           - title: View recent errors
           - title: Check database
+          - title: Sleep status
 
       - title: Runtime control
         type: fieldset
         contents:
+          - title: Wake sleeping server
+          - title: Sleep server now - requires confirmation
           - title: Restart worldserver
           - title: Restart authserver
           - title: Restart all AzerothCore services

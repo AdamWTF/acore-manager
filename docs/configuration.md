@@ -39,6 +39,18 @@ BUILD_THREADS="auto"
 CMAKE_EXTRA_FLAGS=""
 ```
 
+Idle sleep defaults:
+
+```bash
+SLEEP_ENABLED="true"
+SLEEP_IDLE_TIMEOUT="300"
+AUTH_PUBLIC_PORT="3724"
+AUTH_BACKEND_PORT="3725"
+WORLD_PORTS="8085 3443"
+```
+
+When sleep mode is enabled, the public auth port is owned by the sleep proxy and the real authserver should listen on `AUTH_BACKEND_PORT`. See [Idle Sleep](power-sleep.md).
+
 Use `CMAKE_EXTRA_FLAGS` for advanced local CMake options that should not become project defaults. For example:
 
 ```bash

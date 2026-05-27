@@ -20,6 +20,7 @@ validate_systemd_runtime_paths
 log "Switching active release"
 echo "Release: $release_name"
 echo "Path: $release_dir"
+sleep_thaw_if_enabled
 
 echo "Stopping world service: $WORLD_SERVICE"
 systemctl stop "$WORLD_SERVICE" || die "failed to stop world service: $WORLD_SERVICE"

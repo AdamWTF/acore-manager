@@ -17,6 +17,9 @@ Commands:
   restart          Restart world and auth services safely
   restart-world    Restart world service
   restart-auth     Restart auth service
+  sleep-status     Show idle sleep proxy, monitor, port, and process status
+  sleep-thaw       Resume frozen auth and world processes
+  sleep-freeze     Freeze auth and world processes immediately
   logs-world       Follow world service logs
   logs-auth        Follow auth service logs
   last-errors      Show recent auth/world errors and warnings
@@ -56,6 +59,9 @@ script_for_command() {
     restart) echo "scripts/runtime/acore-restart.sh" ;;
     restart-world) echo "scripts/runtime/acore-restart-world.sh" ;;
     restart-auth) echo "scripts/runtime/acore-restart-auth.sh" ;;
+    sleep-status) echo "scripts/power/acore-sleep-status.sh" ;;
+    sleep-thaw) echo "scripts/power/acore-sleep-thaw.sh" ;;
+    sleep-freeze) echo "scripts/power/acore-sleep-freeze.sh" ;;
     logs-world) echo "scripts/logs/acore-logs-world.sh" ;;
     logs-auth) echo "scripts/logs/acore-logs-auth.sh" ;;
     last-errors) echo "scripts/logs/acore-last-errors.sh" ;;

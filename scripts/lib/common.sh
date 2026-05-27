@@ -113,3 +113,26 @@ validate_systemd_runtime_paths() {
   validate_systemd_runtime_path "$AUTH_SERVICE"
   validate_systemd_runtime_path "$WORLD_SERVICE"
 }
+
+is_truthy() {
+  case "${1:-}" in
+    true|TRUE|yes|YES|1|on|ON)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+sleep_enabled() {
+  is_truthy "${SLEEP_ENABLED:-false}"
+}
+
+sleep_thaw_if_enabled() {
+  local thaw_script="$ACM_REPO_ROOT/scripts/power/acore-sleep-thaw.sh"
+
+  if sleep_enabled && [[ -x "$thaw_script" ]]; then
+    "$thaw_script" --quiet || echo "WARN: unable to thaw sleep-managed processes"
+  fi
+}

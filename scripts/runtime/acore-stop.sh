@@ -8,6 +8,7 @@ source "$SCRIPT_DIR/../lib/common.sh"
 command -v systemctl >/dev/null 2>&1 || die "systemctl is not available"
 
 log "Stopping AzerothCore services"
+sleep_thaw_if_enabled
 
 echo "Stopping world service: $WORLD_SERVICE"
 systemctl stop "$WORLD_SERVICE" || die "failed to stop world service: $WORLD_SERVICE"
