@@ -151,6 +151,10 @@ check_sleep_config() {
   for name in \
     SLEEP_CHECK_INTERVAL \
     SLEEP_IDLE_TIMEOUT \
+    MIN_UPTIME_BEFORE_SLEEP \
+    REQUIRE_WORLDSERVER_READY \
+    REQUIRE_PLAYERBOTS_READY \
+    REQUIRE_BOT_LEVEL_BRACKETS_READY \
     AUTH_PUBLIC_PORT \
     AUTH_BACKEND_PORT \
     AUTH_BACKEND_HOST \
@@ -160,7 +164,7 @@ check_sleep_config() {
     require_var "$name"
   done
 
-  for name in socat ss pgrep ps logger; do
+  for name in socat ss pgrep ps logger journalctl; do
     warn_missing_cmd "$name"
   done
 

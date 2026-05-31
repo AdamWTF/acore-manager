@@ -27,6 +27,10 @@ log "Sleep Configuration"
 echo "Enabled: ${SLEEP_ENABLED:-false}"
 echo "Check interval: ${SLEEP_CHECK_INTERVAL:-}"
 echo "Idle timeout: ${SLEEP_IDLE_TIMEOUT:-}"
+echo "Startup grace: ${MIN_UPTIME_BEFORE_SLEEP:-600}"
+echo "Require world ready: ${REQUIRE_WORLDSERVER_READY:-1}"
+echo "Require PlayerBots ready: ${REQUIRE_PLAYERBOTS_READY:-1}"
+echo "Require BotLevelBrackets ready: ${REQUIRE_BOT_LEVEL_BRACKETS_READY:-1}"
 echo "Auth public: ${SLEEP_PROXY_BIND_HOST:-}:${AUTH_PUBLIC_PORT:-}"
 echo "Auth backend: ${AUTH_BACKEND_HOST:-}:${AUTH_BACKEND_PORT:-}"
 echo "World ports: ${WORLD_PORTS:-}"
@@ -67,6 +71,9 @@ if command -v ps >/dev/null 2>&1 && command -v pgrep >/dev/null 2>&1; then
   mapfile -t world < <(world_pids)
   show_pids "Auth" "${auth[@]}"
   show_pids "World" "${world[@]}"
+  if [[ "${#world[@]}" -gt 0 ]]; then
+    echo "World uptime seconds: $(process_uptime_seconds "${world[0]}")"
+  fi
 else
   echo "WARN: ps or pgrep is not available"
 fi

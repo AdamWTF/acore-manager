@@ -9,6 +9,20 @@ require_sleep_enabled
 require_sleep_command ps
 require_sleep_command pgrep
 
+FORCE="false"
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --force)
+      FORCE="true"
+      ;;
+    *)
+      die "unknown sleep-freeze option: $1"
+      ;;
+  esac
+  shift
+done
+
 freeze_label() {
   local label="$1"
   shift
@@ -25,11 +39,16 @@ freeze_label() {
   done
 }
 
+if [[ "$FORCE" != "true" ]]; then
+  sleep_readiness_gate || exit 0
+fi
+
 mapfile -t auth < <(auth_pids)
 mapfile -t world < <(world_pids)
 
 if [[ "${#auth[@]}" -eq 0 && "${#world[@]}" -eq 0 ]]; then
-  die "no authserver or worldserver processes were found"
+  sleep_log "no authserver or worldserver processes were found; refusing to sleep"
+  exit 0
 fi
 
 freeze_label "authserver" "${auth[@]}"

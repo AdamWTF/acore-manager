@@ -7,6 +7,10 @@ Sleep mode is enabled by default in the example config:
 ```bash
 SLEEP_ENABLED="true"
 SLEEP_IDLE_TIMEOUT="300"
+MIN_UPTIME_BEFORE_SLEEP="600"
+REQUIRE_WORLDSERVER_READY="1"
+REQUIRE_PLAYERBOTS_READY="1"
+REQUIRE_BOT_LEVEL_BRACKETS_READY="1"
 AUTH_PUBLIC_PORT="3724"
 AUTH_BACKEND_PORT="3725"
 WORLD_PORTS="8085 3443"
@@ -22,7 +26,26 @@ Bootstrap installs the required tools on Debian/Ubuntu hosts:
 sudo ./scripts/setup/acore-bootstrap.sh
 ```
 
-The sleep scripts need `socat`, `ss`, `pgrep`, `ps`, and `systemd`.
+The sleep scripts need `socat`, `ss`, `pgrep`, `ps`, `journalctl`, and `systemd`.
+
+## Startup Readiness Gate
+
+The monitor refuses to freeze the server until worldserver has been up for at least `MIN_UPTIME_BEFORE_SLEEP` seconds. The default is `600`.
+
+By default it also checks the current boot logs for:
+
+```text
+worldserver-daemon) ready
+mod-playerbots initialized
+[BotLevelBrackets] Module loaded
+```
+
+These checks prevent `SIGSTOP` from interrupting late PlayerBots and BotLevelBrackets initialization. If a server does not use those modules, disable the matching checks in `config/local/manager.conf`:
+
+```bash
+REQUIRE_PLAYERBOTS_READY="0"
+REQUIRE_BOT_LEVEL_BRACKETS_READY="0"
+```
 
 ## Configure Auth Backend Port
 
@@ -73,6 +96,12 @@ journalctl -u acore-sleep-monitor.service -n 100 --no-pager
 ./bin/acore-manager sleep-status
 sudo ./bin/acore-manager sleep-thaw
 sudo ./bin/acore-manager sleep-freeze
+```
+
+`sleep-freeze` uses the same startup readiness gate as the monitor. To force an immediate manual freeze anyway:
+
+```bash
+sudo ./bin/acore-manager sleep-freeze --force
 ```
 
 Normal `stop`, `restart`, `restart-world`, `restart-auth`, `switch-release`, and `rollback` commands thaw processes first when sleep mode is enabled.

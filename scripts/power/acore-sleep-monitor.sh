@@ -15,13 +15,14 @@ last_activity_file="$SLEEP_STATE_DIR/last-world-activity"
 date +%s > "$last_activity_file"
 
 sleep_log "Sleep monitor started"
-sleep_log "World ports: $WORLD_PORTS; idle timeout: $SLEEP_IDLE_TIMEOUT seconds"
+sleep_log "World ports: $WORLD_PORTS; idle timeout: $SLEEP_IDLE_TIMEOUT seconds; startup grace: ${MIN_UPTIME_BEFORE_SLEEP:-600} seconds"
 
 while true; do
   connections="$(world_connection_count)"
 
   if [[ "$connections" -gt 0 ]]; then
     date +%s > "$last_activity_file"
+    clear_sleep_skip_reason
     sleep_log "World connection activity detected: $connections"
   else
     last_activity="$(cat "$last_activity_file" 2>/dev/null || date +%s)"
@@ -30,7 +31,9 @@ while true; do
     sleep_log "No world connections; idle for $idle_time seconds"
 
     if [[ "$idle_time" -ge "$SLEEP_IDLE_TIMEOUT" ]]; then
-      "$SCRIPT_DIR/acore-sleep-freeze.sh" || true
+      if sleep_readiness_gate; then
+        "$SCRIPT_DIR/acore-sleep-freeze.sh" || true
+      fi
     fi
   fi
 

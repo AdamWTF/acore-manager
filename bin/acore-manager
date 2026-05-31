@@ -19,7 +19,7 @@ Commands:
   restart-auth     Restart auth service
   sleep-status     Show idle sleep proxy, monitor, port, and process status
   sleep-thaw       Resume frozen auth and world processes
-  sleep-freeze     Freeze auth and world processes immediately
+  sleep-freeze     Freeze auth and world processes after readiness checks
   logs-world       Follow world service logs
   logs-auth        Follow auth service logs
   last-errors      Show recent auth/world errors and warnings
