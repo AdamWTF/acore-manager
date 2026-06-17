@@ -2,45 +2,54 @@
 set -Eeuo pipefail
 
 COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ACM_REPO_ROOT="$(cd "$COMMON_DIR/../.." && pwd)"
+ACORE_MANAGER_REPO_ROOT="$(cd "$COMMON_DIR/../.." && pwd)"
 
-ACM_DEFAULT_CONFIG="$ACM_REPO_ROOT/config/defaults/manager.conf.example"
-ACM_LOCAL_CONFIG="$ACM_REPO_ROOT/config/local/manager.conf"
+ACORE_MANAGER_DEFAULT_CONFIG="$ACORE_MANAGER_REPO_ROOT/config/defaults/docker-manager.conf.example"
+ACORE_MANAGER_LOCAL_CONFIG="$ACORE_MANAGER_REPO_ROOT/config/local/docker-manager.conf"
 
-if [[ ! -f "$ACM_DEFAULT_CONFIG" ]]; then
-  echo "Missing default config: $ACM_DEFAULT_CONFIG" >&2
+if [[ ! -f "$ACORE_MANAGER_DEFAULT_CONFIG" ]]; then
+  echo "Missing default config: $ACORE_MANAGER_DEFAULT_CONFIG" >&2
   exit 1
 fi
 
 # shellcheck disable=SC1090
-source "$ACM_DEFAULT_CONFIG"
+source "$ACORE_MANAGER_DEFAULT_CONFIG"
 
-if [[ -f "$ACM_LOCAL_CONFIG" ]]; then
+if [[ -f "$ACORE_MANAGER_LOCAL_CONFIG" ]]; then
   # shellcheck disable=SC1090
-  source "$ACM_LOCAL_CONFIG"
+  source "$ACORE_MANAGER_LOCAL_CONFIG"
 fi
 
-# SOURCE_ROOT is the parent directory for source checkouts.
-SOURCE_ROOT="$ACM_ROOT/source"
+BUILD_DIR="$ACORE_MANAGER_REPO_ROOT/build"
+ACORE_SOURCE_DIR="${ACORE_SOURCE_DIR:-$BUILD_DIR/azerothcore}"
+COMPOSE_OUTPUT_DIR="${COMPOSE_OUTPUT_DIR:-$BUILD_DIR/docker-compose}"
+COMPOSE_OVERRIDE_FILE="${COMPOSE_OVERRIDE_FILE:-$COMPOSE_OUTPUT_DIR/docker-compose.override.yml}"
+COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-$COMPOSE_OUTPUT_DIR/docker.env}"
 
-# ACORE_SOURCE_DIR is the AzerothCore git checkout.
-ACORE_SOURCE_DIR="$SOURCE_ROOT/azerothcore"
+absolute_path() {
+  local path="$1"
 
-# MODULES_DIR lives inside the AzerothCore checkout.
-MODULES_DIR="$ACORE_SOURCE_DIR/modules"
+  if [[ "$path" = /* || "$path" =~ ^[A-Za-z]:[\\/].* ]]; then
+    printf '%s\n' "$path"
+  else
+    printf '%s\n' "$ACORE_MANAGER_REPO_ROOT/$path"
+  fi
+}
 
-# Backwards-compatible alias for scripts that still expect SOURCE_DIR to mean
-# the AzerothCore checkout. Do not use SOURCE_DIR for the parent directory.
-SOURCE_DIR="$ACORE_SOURCE_DIR"
+ACORE_SOURCE_DIR="$(absolute_path "$ACORE_SOURCE_DIR")"
+COMPOSE_OUTPUT_DIR="$(absolute_path "$COMPOSE_OUTPUT_DIR")"
+COMPOSE_OVERRIDE_FILE="$(absolute_path "$COMPOSE_OVERRIDE_FILE")"
+COMPOSE_ENV_FILE="$(absolute_path "$COMPOSE_ENV_FILE")"
+ACORE_CONFIG_DIR="$(absolute_path "$ACORE_CONFIG_DIR")"
+ACORE_DATA_DIR="$(absolute_path "$ACORE_DATA_DIR")"
+ACORE_LOG_DIR="$(absolute_path "$ACORE_LOG_DIR")"
 
-BUILD_DIR="$ACM_ROOT/build"
-RELEASES_DIR="$ACM_ROOT/releases"
-CURRENT_LINK="$ACM_ROOT/current"
-CURRENT_DIR="$CURRENT_LINK"
-SHARED_DIR="$ACM_ROOT/shared"
-BACKUP_DIR="$ACM_ROOT/backups"
-MODULE_CONFIG_DIR="$CONFIG_DIR/modules"
-SHARED_LOG_DIR="$SHARED_DIR/logs"
+MODULES_DEFAULT_FILE="$ACORE_MANAGER_REPO_ROOT/config/defaults/modules.txt.example"
+MODULES_LOCAL_FILE="$ACORE_MANAGER_REPO_ROOT/config/local/modules.txt"
+MODULES_FILE="$MODULES_LOCAL_FILE"
+if [[ ! -f "$MODULES_FILE" ]]; then
+  MODULES_FILE="$MODULES_DEFAULT_FILE"
+fi
 
 log() {
   echo
@@ -54,66 +63,6 @@ die() {
   exit 1
 }
 
-validate_current_runtime() {
-  local current_target
-
-  [[ -L "$CURRENT_LINK" ]] || die "CURRENT_LINK is not a symlink: $CURRENT_LINK
-Create a release, list releases, then switch to one:
-  ./bin/acore-manager create-release
-  ./bin/acore-manager list-releases
-  sudo ./bin/acore-manager switch-release <release-name>"
-
-  current_target="$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)"
-  [[ -n "$current_target" && -d "$current_target" ]] || die "CURRENT_LINK does not point to a release: $CURRENT_LINK"
-
-  case "$current_target" in
-    "$BUILD_DIR"/staging|"$BUILD_DIR"/staging/*)
-      die "CURRENT_LINK points to build staging, which is not a runtime path: $current_target"
-      ;;
-  esac
-
-  case "$current_target" in
-    "$RELEASES_DIR"/*)
-      ;;
-    *)
-      die "CURRENT_LINK must point under RELEASES_DIR ($RELEASES_DIR), got: $current_target"
-      ;;
-  esac
-
-  [[ -x "$CURRENT_LINK/bin/authserver" ]] || die "authserver is missing or not executable: $CURRENT_LINK/bin/authserver"
-  [[ -x "$CURRENT_LINK/bin/worldserver" ]] || die "worldserver is missing or not executable: $CURRENT_LINK/bin/worldserver"
-}
-
-validate_systemd_runtime_path() {
-  local service="$1"
-  local unit_text
-
-  command -v systemctl >/dev/null 2>&1 || die "systemctl is not available"
-
-  unit_text="$(systemctl cat "$service" 2>/dev/null || true)"
-  if [[ -z "$unit_text" ]]; then
-    die "systemd unit is not installed or cannot be read: $service"
-  fi
-
-  if grep -q 'build/staging' <<<"$unit_text"; then
-    die "systemd unit $service still points at build/staging.
-Fix installed service templates before starting or restarting services:
-  sudo ./bin/acore-manager fix-runtime-paths
-  sudo ./bin/acore-manager fix-runtime-paths --apply
-Then restart explicitly when ready."
-  fi
-
-  if ! grep -q "$CURRENT_LINK/bin/" <<<"$unit_text"; then
-    echo "WARN: systemd unit $service does not reference $CURRENT_LINK/bin"
-    echo "      Review with: systemctl cat $service"
-  fi
-}
-
-validate_systemd_runtime_paths() {
-  validate_systemd_runtime_path "$AUTH_SERVICE"
-  validate_systemd_runtime_path "$WORLD_SERVICE"
-}
-
 is_truthy() {
   case "${1:-}" in
     true|TRUE|yes|YES|1|on|ON)
@@ -125,14 +74,122 @@ is_truthy() {
   esac
 }
 
-sleep_enabled() {
-  is_truthy "${SLEEP_ENABLED:-false}"
+trim() {
+  local value="${1:-}"
+  value="${value//$'\r'/}"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
 }
 
-sleep_thaw_if_enabled() {
-  local thaw_script="$ACM_REPO_ROOT/scripts/power/acore-sleep-thaw.sh"
+require_cmd() {
+  local name="$1"
 
-  if sleep_enabled && [[ -x "$thaw_script" ]]; then
-    "$thaw_script" --quiet || echo "WARN: unable to thaw sleep-managed processes"
+  command -v "$name" >/dev/null 2>&1 || die "required command is missing: $name"
+}
+
+compose_base_file() {
+  local configured="${COMPOSE_BASE_FILE:-}"
+
+  if [[ -n "$configured" ]]; then
+    if [[ "$configured" = /* || "$configured" =~ ^[A-Za-z]:[\\/].* ]]; then
+      printf '%s\n' "$configured"
+    else
+      printf '%s\n' "$ACORE_MANAGER_REPO_ROOT/$configured"
+    fi
+    return
   fi
+
+  local candidate
+  for candidate in \
+    "$ACORE_SOURCE_DIR/docker-compose.yml" \
+    "$ACORE_SOURCE_DIR/docker-compose.yaml" \
+    "$ACORE_SOURCE_DIR/docker/docker-compose.yml" \
+    "$ACORE_SOURCE_DIR/docker/docker-compose.yaml" \
+    "$ACORE_SOURCE_DIR/conf/dist/docker/docker-compose.yml" \
+    "$ACORE_SOURCE_DIR/conf/dist/docker/docker-compose.yaml"; do
+    if [[ -f "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  done
+
+  return 1
+}
+
+compose_project_args() {
+  local base_file
+  base_file="$(compose_base_file)" || die "could not find an AzerothCore Docker Compose file under $ACORE_SOURCE_DIR; run './bin/acore-manager docker sync-modules' first or set COMPOSE_BASE_FILE"
+
+  printf '%s\n' compose -p "$COMPOSE_PROJECT_NAME" -f "$base_file" -f "$COMPOSE_OVERRIDE_FILE"
+}
+
+validate_module_name() {
+  local module_name="$1"
+
+  [[ "$module_name" =~ ^[A-Za-z0-9._-]+$ ]] || die "invalid module name '$module_name'; use letters, numbers, '.', '_', or '-' only"
+}
+
+ensure_acore_source() {
+  require_cmd git
+  mkdir -p "$(dirname "$ACORE_SOURCE_DIR")"
+
+  if [[ -d "$ACORE_SOURCE_DIR/.git" ]]; then
+    log "Updating AzerothCore source"
+    git -C "$ACORE_SOURCE_DIR" fetch origin "$ACORE_BRANCH"
+    git -C "$ACORE_SOURCE_DIR" checkout "$ACORE_BRANCH"
+    git -C "$ACORE_SOURCE_DIR" pull --ff-only origin "$ACORE_BRANCH"
+  elif [[ -e "$ACORE_SOURCE_DIR" ]]; then
+    die "AzerothCore source path exists but is not a git checkout: $ACORE_SOURCE_DIR"
+  else
+    log "Cloning AzerothCore source"
+    git clone --branch "$ACORE_BRANCH" "$ACORE_REPO" "$ACORE_SOURCE_DIR"
+  fi
+}
+
+ensure_compose_override() {
+  mkdir -p "$COMPOSE_OUTPUT_DIR" "$ACORE_CONFIG_DIR" "$ACORE_DATA_DIR" "$ACORE_LOG_DIR"
+
+  cat > "$COMPOSE_ENV_FILE" <<EOF
+MYSQL_HOST=$MYSQL_HOST
+MYSQL_PORT=$MYSQL_PORT
+MYSQL_USER=$MYSQL_USER
+MYSQL_PASSWORD=$MYSQL_PASSWORD
+MYSQL_AUTH_DATABASE=$MYSQL_AUTH_DATABASE
+MYSQL_CHARACTER_DATABASE=$MYSQL_CHARACTER_DATABASE
+MYSQL_WORLD_DATABASE=$MYSQL_WORLD_DATABASE
+EOF
+
+  cat > "$COMPOSE_OVERRIDE_FILE" <<EOF
+services:
+  $SERVICE_DATABASE:
+    profiles:
+      - local-db
+    volumes:
+      - "$ACORE_DATA_DIR/mysql:/var/lib/mysql"
+
+  $SERVICE_DB_IMPORT:
+    env_file:
+      - "$COMPOSE_ENV_FILE"
+    volumes:
+      - "$ACORE_CONFIG_DIR:/azerothcore/env/dist/etc"
+      - "$ACORE_DATA_DIR:/azerothcore/env/dist/data"
+      - "$ACORE_LOG_DIR:/azerothcore/env/dist/logs"
+
+  $SERVICE_AUTHSERVER:
+    env_file:
+      - "$COMPOSE_ENV_FILE"
+    volumes:
+      - "$ACORE_CONFIG_DIR:/azerothcore/env/dist/etc"
+      - "$ACORE_DATA_DIR:/azerothcore/env/dist/data"
+      - "$ACORE_LOG_DIR:/azerothcore/env/dist/logs"
+
+  $SERVICE_WORLDSERVER:
+    env_file:
+      - "$COMPOSE_ENV_FILE"
+    volumes:
+      - "$ACORE_CONFIG_DIR:/azerothcore/env/dist/etc"
+      - "$ACORE_DATA_DIR:/azerothcore/env/dist/data"
+      - "$ACORE_LOG_DIR:/azerothcore/env/dist/logs"
+EOF
 }

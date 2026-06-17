@@ -7,39 +7,17 @@ REPO_ROOT="$(cd "$BIN_DIR/.." && pwd)"
 usage() {
   cat <<EOF
 Usage:
-  acore-manager <command> [args...]
+  acore-manager docker <command> [args...]
 
-Commands:
-  status           Show runtime status
-  validate         Validate config and required commands
-  start            Start auth and world services
-  stop             Stop world and auth services
-  restart          Restart world and auth services safely
-  restart-world    Restart world service
-  restart-auth     Restart auth service
-  sleep-status     Show idle sleep proxy, monitor, port, and process status
-  sleep-thaw       Resume frozen auth and world processes
-  sleep-freeze     Freeze auth and world processes after readiness checks
-  logs-world       Follow world service logs
-  logs-auth        Follow auth service logs
-  last-errors      Show recent auth/world errors and warnings
-  update-source    Clone or update AzerothCore source
-  update-modules   Clone or update configured modules
-  build            Build AzerothCore into staging
-  create-release   Create a timestamped release from staging
-  release-latest   Run update, build, release, switch, and status workflow
-  list-releases    List releases and mark the active release
-  switch-release   Switch to a named release
-  rollback         Roll back to the previous release
-  db-check         Check MySQL connectivity and databases
-  db-backup        Back up configured MySQL databases
-  config-backup    Back up local/shared config
-  config-diff      Compare live configs against .dist files
-  prepare-configs  Seed shared runtime configs from release templates
-  link-configs     Link shared configs into the active release
-  check-data       Check required AzerothCore data directories
-  validate-runtime Validate active release, shared config links, and data
-  fix-runtime-paths Check/fix installed systemd units that reference staging
+Docker commands:
+  validate             Validate Docker manager config and local tools
+  sync-modules         Clone/update AzerothCore and configured modules
+  build                Generate overrides and run docker compose build
+  db-import            Run the db-import service
+  up                   Start authserver/worldserver and database when local
+  down                 Stop the Compose deployment
+  logs <service>       Follow logs for a Compose service
+  shell <service>      Open a shell in a running service container
 EOF
 }
 
@@ -50,41 +28,39 @@ die() {
   exit 1
 }
 
-script_for_command() {
+script_for_docker_command() {
   case "$1" in
-    status) echo "scripts/runtime/acore-status.sh" ;;
-    validate) echo "scripts/config/acore-validate-config.sh" ;;
-    start) echo "scripts/runtime/acore-start.sh" ;;
-    stop) echo "scripts/runtime/acore-stop.sh" ;;
-    restart) echo "scripts/runtime/acore-restart.sh" ;;
-    restart-world) echo "scripts/runtime/acore-restart-world.sh" ;;
-    restart-auth) echo "scripts/runtime/acore-restart-auth.sh" ;;
-    sleep-status) echo "scripts/power/acore-sleep-status.sh" ;;
-    sleep-thaw) echo "scripts/power/acore-sleep-thaw.sh" ;;
-    sleep-freeze) echo "scripts/power/acore-sleep-freeze.sh" ;;
-    logs-world) echo "scripts/logs/acore-logs-world.sh" ;;
-    logs-auth) echo "scripts/logs/acore-logs-auth.sh" ;;
-    last-errors) echo "scripts/logs/acore-last-errors.sh" ;;
-    update-source) echo "scripts/source/acore-update-source.sh" ;;
-    update-modules) echo "scripts/source/acore-update-modules.sh" ;;
-    build) echo "scripts/build/acore-build.sh" ;;
-    create-release) echo "scripts/build/acore-create-release.sh" ;;
-    release-latest) echo "scripts/build/acore-release-latest.sh" ;;
-    list-releases) echo "scripts/releases/acore-list-releases.sh" ;;
-    switch-release) echo "scripts/releases/acore-switch-release.sh" ;;
-    rollback) echo "scripts/releases/acore-rollback.sh" ;;
-    db-check) echo "scripts/db/acore-db-check.sh" ;;
-    db-backup) echo "scripts/db/acore-db-backup.sh" ;;
-    config-backup) echo "scripts/config/acore-config-backup.sh" ;;
-    config-diff) echo "scripts/config/acore-config-diff.sh" ;;
-    prepare-configs) echo "scripts/config/acore-prepare-configs.sh" ;;
-    link-configs) echo "scripts/config/acore-link-shared-configs.sh" ;;
-    check-data) echo "scripts/config/acore-check-data.sh" ;;
-    validate-runtime) echo "scripts/config/acore-validate-runtime.sh" ;;
-    fix-runtime-paths) echo "scripts/runtime/acore-fix-runtime-paths.sh" ;;
+    validate) echo "scripts/docker/acore-docker-validate.sh" ;;
+    sync-modules) echo "scripts/docker/acore-docker-sync-modules.sh" ;;
+    build) echo "scripts/docker/acore-docker-build.sh" ;;
+    db-import) echo "scripts/docker/acore-docker-db-import.sh" ;;
+    up) echo "scripts/docker/acore-docker-up.sh" ;;
+    down) echo "scripts/docker/acore-docker-down.sh" ;;
+    logs) echo "scripts/docker/acore-docker-logs.sh" ;;
+    shell) echo "scripts/docker/acore-docker-shell.sh" ;;
     *) return 1 ;;
   esac
 }
+
+if [[ "$#" -eq 0 ]]; then
+  usage
+  exit 1
+fi
+
+scope="$1"
+shift
+
+case "$scope" in
+  help|-h|--help)
+    usage
+    exit 0
+    ;;
+  docker)
+    ;;
+  *)
+    die "unknown scope: $scope"
+    ;;
+esac
 
 if [[ "$#" -eq 0 ]]; then
   usage
@@ -101,15 +77,13 @@ case "$command_name" in
     ;;
 esac
 
-script_relative="$(script_for_command "$command_name")" || die "unknown command: $command_name"
+script_relative="$(script_for_docker_command "$command_name")" || die "unknown docker command: $command_name"
 script_path="$REPO_ROOT/$script_relative"
 
 if [[ ! -f "$script_path" ]]; then
-  die "command '$command_name' maps to a missing script: $script_relative"
+  die "docker command '$command_name' maps to a missing script: $script_relative"
 fi
 
-if [[ ! -x "$script_path" ]]; then
-  die "command '$command_name' maps to a non-executable script: $script_relative"
-fi
-
-exec "$script_path" "$@"
+set -- "$@"
+# shellcheck disable=SC1090
+source "$script_path"

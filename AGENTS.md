@@ -2,46 +2,31 @@
 
 ## Project Overview
 
-`acore-manager` is a generic Linux automation toolkit for managing AzerothCore servers.
+`acore-manager` is a generic automation wrapper for the normal AzerothCore Docker Compose workflow.
 
-It helps operators build, release, run, monitor, back up, and roll back AzerothCore using shell scripts, config files, systemd templates, and optional integrations.
+It helps operators clone/update AzerothCore source, clone/update configured modules, generate Docker Compose overrides, run the standard Docker build/start/import lifecycle, manage persistent config/data/log mounts, and optionally target an external MySQL host.
 
-This repository must stay generic. It is not tied to a private realm, custom repack, personal environment, or curated private module set.
-
-Default/example install root:
-
-```text
-/opt/acore-manager
-```
+This repository must stay generic. It is not tied to a private realm, custom repack, personal environment, private registry, or curated private module set.
 
 ## Core Principles
 
 - Prefer small, reviewable changes.
+- Keep the project focused on automating the AzerothCore Docker Compose workflow.
 - Preserve existing behavior unless the task explicitly asks for a behavior change.
-- Keep scripts composable. Add focused helpers rather than large monolithic scripts.
-- Avoid destructive defaults. Warn first where practical.
+- Keep scripts composable and clear.
 - Fail clearly with useful messages.
-- Keep optional integrations optional.
-- Do not assume a specific server, module pack, hostname, user, IP address, or database credential.
+- Do not assume a specific server, module pack, hostname, user, IP address, registry, or database credential.
 
 ## Repository Conventions
 
 - `bin/acore-manager` is the user-facing CLI dispatcher.
 - `scripts/lib/common.sh` is the shared shell loader for config and derived paths.
-- Script categories:
-  - `scripts/setup/`
-  - `scripts/source/`
-  - `scripts/build/`
-  - `scripts/runtime/`
-  - `scripts/releases/`
-  - `scripts/db/`
-  - `scripts/config/`
-  - `scripts/logs/`
+- Docker workflow scripts live in `scripts/docker/`.
 - Default/example config belongs in `config/defaults/`.
 - Local user config belongs in `config/local/` and should remain gitignored.
-- systemd templates live in `systemd/`.
-- Optional OliveTin example config lives in `olivetin/`.
 - Public docs live in `README.md` and `docs/`.
+- Generated Docker Compose files belong under `build/docker-compose/`.
+- Cloned AzerothCore source belongs under `build/azerothcore/` by default.
 
 ## Shell Script Conventions
 
@@ -54,27 +39,20 @@ set -Eeuo pipefail
 ```
 
 - Source `scripts/lib/common.sh` instead of duplicating config/path logic.
-- Use configured values from common config, especially `ACM_ROOT`, `CURRENT_LINK`, `AUTH_SERVICE`, and `WORLD_SERVICE`.
-- Treat `SOURCE_ROOT` as the source parent directory and `ACORE_SOURCE_DIR` as the AzerothCore git checkout.
+- Use configured values from common config, especially source, module, service, path, and Docker settings.
 - Keep scripts idempotent where practical.
 - Check required commands before using them.
 - Print clear status messages before important actions.
-- Prefer explicit validation before changing symlinks, services, files, or directories.
-- Build scripts must not restart services unless explicitly part of a release/switch workflow.
-- Runtime scripts must use configured service names from common config.
-- Release switching should preserve the safe order: stop world, stop auth, update link, start auth, start world.
+- Do not put credentials into committed Compose files, metadata files, docs, or examples.
+- Do not add backups, deployment orchestration beyond the local Docker Compose lifecycle, or host/service-control workflows outside Compose.
 
 ## Config And Secrets Rules
 
-- Public files must not contain private IPs, hostnames, usernames, passwords, emails, access tokens, personal branding, or private server names.
-- Use placeholders in docs/examples:
-  - `<mysql-host>`
-  - `<mysql-user>`
-  - `<mysql-password>`
-  - `<server-host>`
-- Do not commit real `config/local/manager.conf`, `config/local/modules.txt`, `config/local/db.conf`, or `.env`.
+- Public files must not contain private IPs, hostnames, usernames, passwords, emails, access tokens, personal branding, private registry credentials, or private server names.
+- Use placeholders in docs/examples, such as `<registry-host>`.
+- Do not commit real `config/local/docker-manager.conf`, `config/local/modules.txt`, or `.env`.
 - Do not add private module packs to default examples.
-- Do not hardcode credentials into scripts, docs, systemd files, OliveTin config, or examples.
+- Do not hardcode credentials into scripts, docs, committed Compose files, metadata, or examples.
 - `config/defaults/*.example` files should contain safe generic defaults only.
 
 ## Testing And Validation Expectations
@@ -89,55 +67,45 @@ For dispatcher changes, smoke-test read-only commands:
 
 ```bash
 ./bin/acore-manager --help
-./bin/acore-manager status
+./bin/acore-manager docker validate
 ```
 
-For config changes:
+For Docker Compose changes:
 
 ```bash
-./bin/acore-manager validate
+docker compose version
 ```
 
-For documentation or public examples, scan for private values and stale script names.
+Do not push images unless the user explicitly asked for that action and registry authentication is already configured.
 
-Do not run scripts that install packages, start/stop services, switch releases, build AzerothCore, or modify `/opt/acore-manager` unless the user explicitly asked for that action and the environment is appropriate.
+For documentation or public examples, scan for private values and stale command names.
 
 ## Documentation Expectations
 
-- Keep `README.md` concise. It should introduce the project, show quick start, and link to docs.
+- Keep `README.md` concise.
 - Put practical details in `docs/`.
 - Make command examples match real scripts or `bin/acore-manager` commands.
-- Prefer the CLI wrapper in user-facing docs.
-- Use `/opt/acore-manager` for example paths.
 - Keep docs generic and public-safe.
 - Update docs when script names, paths, config keys, or workflows change.
 
 ## Things Agents Must Not Do
 
-- Do not introduce private branding, private paths, private IPs, usernames, passwords, emails, or hostnames.
+- Do not introduce private branding, private paths, private IPs, usernames, passwords, emails, hostnames, tokens, or registry credentials.
 - Do not replace generic defaults with one server's local configuration.
 - Do not commit files under `config/local/` except `.gitkeep`.
-- Do not make OliveTin, or any optional integration, required for core functionality.
-- Do not add build/release behavior to runtime-only scripts.
-- Do not start, stop, restart, enable, or disable services from scripts that are meant to be read-only checks.
-- Do not make build scripts switch `CURRENT_LINK`.
-- Do not delete modules or releases unless the script is explicitly for pruning and preserves the active release.
-- Do not overwrite existing local config or installed service files by default.
+- Do not reintroduce operational management helpers or deployment orchestration outside the Compose lifecycle.
+- Do not delete local images, build caches, or registry artifacts unless explicitly asked.
 - Do not reintroduce a monolithic build-and-deploy script.
 
 ## Suggested Pre-Commit Checklist
 
 - Scripts use `scripts/lib/common.sh` where config or derived paths are needed.
-- New scripts are executable when intended to be run directly.
 - Shell scripts pass `bash -n`.
 - Commands in docs match files that exist.
 - Public files contain no secrets or private values.
 - Local config remains ignored by git.
-- Optional integrations remain optional.
-- Existing behavior is preserved unless explicitly changed.
-- README stays short; detailed guidance belongs in `docs/`.
-- For release/runtime changes, service order and `CURRENT_LINK` behavior are intentional.
+- Compose overrides, metadata, and docs do not leak credentials.
 
 ## When Unsure
 
-Prefer small, reviewable changes. Preserve existing behavior. Ask for clarification rather than making broad architecture changes.
+Prefer small, reviewable changes. Preserve generic behavior. Ask for clarification rather than making broad architecture changes.

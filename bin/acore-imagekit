@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+cat >&2 <<EOF
+acore-imagekit has been replaced by the compose-based Docker manager.
+
+Use:
+  ./bin/acore-manager docker <command>
+
+This wrapper forwards compatible read-only commands where possible, but it no
+longer builds a single all-in-one AzerothCore runtime image.
+EOF
+
+case "${1:-}" in
+  validate)
+    shift
+    exec "$BIN_DIR/acore-manager" docker validate "$@"
+    ;;
+  help|-h|--help|"")
+    exec "$BIN_DIR/acore-manager" docker --help
+    ;;
+  *)
+    echo "Error: imagekit command '$1' is no longer supported." >&2
+    exit 1
+    ;;
+esac

@@ -1,84 +1,65 @@
 # acore-manager
 
-`acore-manager` is a reusable Linux server manager for AzerothCore. It provides small shell tools for updating source and modules, building staged server files, creating timestamped releases, switching or rolling back releases, managing systemd services, viewing logs, and backing up configuration and databases.
+`acore-manager` automates the normal AzerothCore Docker Compose workflow. It keeps AzerothCore as a multi-container deployment and removes the repetitive manual steps around source checkout, module sync, Compose overrides, builds, database import, and service lifecycle.
 
-It is for server operators who want a simple, scriptable workflow around an AzerothCore Linux host without baking private paths, module packs, or credentials into the repository.
-
-Default install root:
-
-```text
-/opt/acore-manager
-```
+It does not build one all-in-one runtime image for `authserver` and `worldserver`.
 
 ## Quick Start
 
-Clone the repository on the Linux host, then run the bootstrap:
+Create local config:
 
 ```bash
-find scripts -type f -name "*.sh" -exec chmod +x {} \;
-chmod +x bin/acore-manager 2>/dev/null || true
-sudo ./scripts/setup/acore-bootstrap.sh
+cp config/defaults/docker-manager.conf.example config/local/docker-manager.conf
+cp config/defaults/modules.txt.example config/local/modules.txt
 ```
 
-Review or create local configuration:
+Validate local tools and config:
 
 ```bash
-config/local/manager.conf
-config/local/modules.txt
-config/local/db.conf        # optional, for DB checks and backups
+./bin/acore-manager docker validate
 ```
 
-Use the CLI wrapper for common actions:
+Clone/update AzerothCore and configured modules:
 
 ```bash
-./bin/acore-manager validate
-./bin/acore-manager update-source
-./bin/acore-manager update-modules
-./bin/acore-manager build
-./bin/acore-manager create-release
-./bin/acore-manager list-releases
+./bin/acore-manager docker sync-modules
 ```
 
-Creating a release does not mean the server is running. A real first setup still needs client data files, `authserver.conf` and `worldserver.conf`, databases, installed systemd services, and firewall/client checks. Follow the complete guide before switching a first production release.
-
-`/opt/acore-manager/build/staging` is temporary build output only. The active runtime is always `/opt/acore-manager/current`, which points to a versioned release under `/opt/acore-manager/releases`.
-
-Minimal operational flow:
+Build and run the normal Docker Compose services:
 
 ```bash
-./bin/acore-manager validate
-./bin/acore-manager update-source
-./bin/acore-manager update-modules
-./bin/acore-manager build
-./bin/acore-manager create-release
-./bin/acore-manager list-releases
-# prepare data files, configs, database, and systemd services
-./bin/acore-manager prepare-configs <release-name>
-./bin/acore-manager check-data
-./bin/acore-manager switch-release <release-name>
-./bin/acore-manager status
-./bin/acore-manager logs-world
+./bin/acore-manager docker build
+./bin/acore-manager docker db-import
+./bin/acore-manager docker up
+```
+
+Inspect or access services:
+
+```bash
+./bin/acore-manager docker logs worldserver
+./bin/acore-manager docker shell worldserver
+```
+
+Stop the deployment:
+
+```bash
+./bin/acore-manager docker down
+```
+
+## Configuration
+
+Local Docker manager settings live in `config/local/docker-manager.conf`. Real module selections belong in `config/local/modules.txt`, which is ignored by git.
+
+The module format is:
+
+```text
+module-name|git-url|branch
 ```
 
 ## Documentation
 
-- [Full Server Setup](docs/full-server-setup.md)
-- [Command Reference](docs/commands.md)
-- [Install](docs/install.md)
+- [Commands](docs/commands.md)
 - [Configuration](docs/configuration.md)
+- [Docker Workflow](docs/docker-workflow.md)
 - [Modules](docs/modules.md)
-- [Build and Release](docs/build-and-release.md)
-- [Runtime](docs/runtime.md)
-- [Idle Sleep](docs/power-sleep.md)
-- [Rollback](docs/rollback.md)
-- [Database Backups](docs/database-backups.md)
-- [OliveTin](docs/olivetin.md)
 - [Troubleshooting](docs/troubleshooting.md)
-
-OliveTin web buttons are optional. See [OliveTin](docs/olivetin.md) for setup steps, and keep OliveTin LAN/VPN-only rather than publicly exposed.
-
-If a script fails with `Permission denied`, run:
-
-```bash
-sudo bash /opt/acore-manager/scripts/setup/acore-fix-permissions.sh
-```

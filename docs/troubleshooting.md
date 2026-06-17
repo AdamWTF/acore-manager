@@ -1,266 +1,53 @@
 # Troubleshooting
 
-For the complete first-server flow, including data files, configs, databases, services, firewall, and client connection, see [Full Server Setup](full-server-setup.md).
+## Docker Compose Missing
 
-## Validate First
+Run:
 
 ```bash
-./bin/acore-manager validate
+./bin/acore-manager docker validate
+docker compose version
 ```
 
-Fix missing commands, config values, or path issues reported by validation before running builds or release switches.
+Install or start Docker if either command reports a Docker problem.
 
-## Script Permission Denied
+## AzerothCore Source Missing
 
-If a script fails with `Permission denied`, fix executable bits:
+Run:
 
 ```bash
-sudo bash /opt/acore-manager/scripts/setup/acore-fix-permissions.sh
+./bin/acore-manager docker sync-modules
 ```
 
-Or:
+By default the source checkout is created at `build/azerothcore`.
 
-```bash
-sudo find /opt/acore-manager/scripts -type f -name "*.sh" -exec chmod +x {} \;
-sudo chmod +x /opt/acore-manager/bin/acore-manager 2>/dev/null || true
+## Compose File Not Found
+
+If validation cannot find an AzerothCore Compose file after the source is cloned, set `COMPOSE_BASE_FILE` in `config/local/docker-manager.conf` to the Compose file path used by your checkout.
+
+## Module Clone Fails
+
+Check `config/local/modules.txt`. Each active line must use:
+
+```text
+module-name|git-url|branch
 ```
 
-## MySQL Connection Fails
-
-Check `config/local/db.conf`:
+Then run:
 
 ```bash
+./bin/acore-manager docker validate
+./bin/acore-manager docker sync-modules
+```
+
+## External MySQL Connection Fails
+
+Check the MySQL settings in `config/local/docker-manager.conf`:
+
+```bash
+MYSQL_EXTERNAL="true"
 MYSQL_HOST="<mysql-host>"
 MYSQL_PORT="3306"
-MYSQL_USER="<mysql-user>"
-MYSQL_PASSWORD="<mysql-password>"
 ```
 
-For remote MySQL, confirm the host is reachable from the server running `acore-manager`. For SSH tunnels, `MYSQL_HOST="127.0.0.1"` is common.
-
-Run:
-
-```bash
-./bin/acore-manager db-check
-```
-
-## Services Do Not Start
-
-Check status and logs:
-
-```bash
-./bin/acore-manager status
-./bin/acore-manager logs-auth
-./bin/acore-manager logs-world
-./bin/acore-manager last-errors
-```
-
-Confirm `CURRENT_LINK` points at a release containing:
-
-```text
-bin/authserver
-bin/worldserver
-```
-
-Confirm systemd templates match your configured user, group, and install root.
-
-Confirm services run from `/opt/acore-manager/current`, not build staging:
-
-```bash
-systemctl cat azerothcore-auth.service
-systemctl cat azerothcore-world.service
-sudo ./bin/acore-manager fix-runtime-paths
-```
-
-Also confirm client data exists:
-
-```text
-/opt/acore-manager/shared/data/dbc
-/opt/acore-manager/shared/data/maps
-/opt/acore-manager/shared/data/vmaps
-/opt/acore-manager/shared/data/mmaps
-```
-
-and that `authserver.conf` and `worldserver.conf` have been prepared from the release `.conf.dist` files.
-
-## Server Starts But Cannot Find worldserver.conf
-
-Check that shared configs are linked into the active release:
-
-```bash
-readlink -f /opt/acore-manager/current/etc/worldserver.conf
-sudo ./bin/acore-manager link-configs
-```
-
-The link should resolve to:
-
-```text
-/opt/acore-manager/shared/configs/worldserver.conf
-```
-
-## Module Config Not Loaded After Release Switch
-
-Check the module config link:
-
-```bash
-readlink -f /opt/acore-manager/current/etc/modules
-```
-
-It should resolve to:
-
-```text
-/opt/acore-manager/shared/configs/modules
-```
-
-If `current/etc/modules` is a real directory instead of a symlink, run:
-
-```bash
-sudo ./bin/acore-manager link-configs
-```
-
-The linker moves real files or directories aside with timestamped backups before creating symlinks.
-
-## Edited Release Config But Change Disappeared
-
-Do not edit files under:
-
-```text
-/opt/acore-manager/releases/<release>/etc
-```
-
-Edit shared configs instead:
-
-```text
-/opt/acore-manager/shared/configs
-```
-
-## DataDir Points To An Old Release Path
-
-Set `DataDir` in shared `worldserver.conf` to:
-
-```text
-/opt/acore-manager/shared/data
-```
-
-Then check:
-
-```bash
-./bin/acore-manager check-data
-```
-
-## Services Are Running From build/staging Instead Of current
-
-Symptoms:
-
-- release switch appears to do nothing
-- rollback does not affect running binaries
-- config symlinks are missing
-- services cannot find shared configs
-- deleting `build/staging` breaks runtime
-
-Checks:
-
-```bash
-systemctl cat azerothcore-auth.service
-systemctl cat azerothcore-world.service
-readlink -f /opt/acore-manager/current
-ls -l /opt/acore-manager/current/bin
-grep -R "build/staging" /etc/systemd/system /opt/acore-manager
-```
-
-Fix installed acore-manager service templates:
-
-```bash
-sudo ./bin/acore-manager fix-runtime-paths
-sudo ./bin/acore-manager fix-runtime-paths --apply
-sudo ./bin/acore-manager validate-runtime
-```
-
-The fix script reloads systemd but does not restart services. Restart or switch releases explicitly when ready.
-
-If this happens from OliveTin, the button is usually calling the correct `acore-manager` command, but the installed systemd unit is stale. Run the same `fix-runtime-paths` commands on the server, then press the OliveTin restart button again.
-
-If logs still show `Config::LoadFile` looking under `/opt/acore-manager/build/staging/etc`, the existing binaries were built with the old staging install prefix baked in. Rebuild and create a new release with the updated build script:
-
-```bash
-./bin/acore-manager build
-./bin/acore-manager create-release
-sudo ./bin/acore-manager prepare-configs <new-release>
-sudo ./bin/acore-manager switch-release <new-release>
-```
-
-## Client Cannot Connect
-
-Check the client realmlist, firewall, and ports:
-
-```bash
-ss -ltnp | grep -E '3724|8085'
-```
-
-If login works but the realm or character list hangs, check the realm address in the auth database, worldserver port reachability, and both service logs.
-
-## Build Fails
-
-Update source and modules before building:
-
-```bash
-./bin/acore-manager update-source
-./bin/acore-manager update-modules
-./bin/acore-manager build
-```
-
-If dependencies are missing on Ubuntu/Debian, rerun:
-
-```bash
-sudo ./scripts/setup/acore-bootstrap.sh
-```
-
-## Build Fails In Jemalloc With GCC 15
-
-Symptom:
-
-```text
-deps/jemalloc/src/safety_check.c
-error: conflicting types for 'je_safety_check_set_abort'
-```
-
-This is a compiler/dependency compatibility issue between GCC 15 and AzerothCore's bundled jemalloc, not an `acore-manager` workflow problem.
-
-Workaround:
-
-```bash
-echo 'CMAKE_EXTRA_FLAGS="-DNOJEM=1"' | sudo tee -a config/local/manager.conf
-./bin/acore-manager build
-```
-
-`NOJEM` disables jemalloc. Treat this as a local workaround, not a universal default.
-
-## Release Switch Fails
-
-List releases:
-
-```bash
-./bin/acore-manager list-releases
-```
-
-Switch only to a release directory that exists under `RELEASES_DIR` and contains executable server binaries.
-
-## Config Diff Has No Output
-
-`config-diff` needs `.dist` files under:
-
-```text
-CURRENT_LINK/etc
-```
-
-and live configs under:
-
-```text
-CONFIG_DIR
-```
-
-Run:
-
-```bash
-./bin/acore-manager config-diff
-```
+Do not commit real database credentials.

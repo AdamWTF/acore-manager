@@ -1,0 +1,6 @@
+.git
+.env
+config/local
+build/*
+*.log
+*.tar.gz

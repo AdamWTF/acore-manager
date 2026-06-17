@@ -1,12 +1,8 @@
-config.env
-config/local/manager.conf
+config/local/docker-manager.conf
 config/local/modules.txt
-config/local/db.conf
 .env
 *.log
 *.tar.gz
 .DS_Store
 
-# Local build/staging paths if kept inside the repo
 /build/
-/staging/

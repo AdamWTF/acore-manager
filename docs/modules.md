@@ -1,15 +1,6 @@
 # Modules
 
-Modules are configured with a simple pipe-delimited file:
-
-```text
-module-name|git-url|branch
-```
-
-The module update script reads:
-
-1. `config/local/modules.txt` if it exists
-2. otherwise `config/defaults/modules.txt.example`
+Modules are optional Git repositories cloned into the AzerothCore source checkout before Docker Compose builds the services.
 
 Create a local module list:
 
@@ -17,26 +8,28 @@ Create a local module list:
 cp config/defaults/modules.txt.example config/local/modules.txt
 ```
 
-Example entry:
+Format:
+
+```text
+module-name|git-url|branch
+```
+
+Example:
 
 ```text
 mod-example|https://github.com/example/mod-example.git|master
 ```
 
-Blank lines and comments are ignored.
-
-## Update Modules
+Run:
 
 ```bash
-./bin/acore-manager update-modules
+./bin/acore-manager docker sync-modules
 ```
 
-The script clones missing modules into:
+Each active module is cloned or updated at:
 
 ```text
-/opt/acore-manager/source/azerothcore/modules
+build/azerothcore/modules/<module-name>
 ```
 
-It fetches and pulls existing module repositories, and prints each module commit hash.
-
-If `MODULES_DIR` contains directories not listed in the module file, the script warns only. It does not delete modules.
+Only simple module directory names are accepted: letters, numbers, `.`, `_`, and `-`.
