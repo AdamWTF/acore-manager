@@ -64,6 +64,18 @@ bin/worldserver
 
 Confirm systemd templates match your configured user, group, and install root.
 
+If updating an existing manager and this fails:
+
+```text
+Error: unknown command: install-services
+```
+
+the checked-out dispatcher is older than the service installer command. Run the installer script directly once:
+
+```bash
+sudo ./scripts/setup/acore-install-services.sh --force
+```
+
 Confirm services run from `/opt/acore-manager/current`, not build staging:
 
 ```bash

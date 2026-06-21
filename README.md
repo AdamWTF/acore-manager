@@ -42,6 +42,12 @@ sudo ./bin/acore-manager install-services --force
 ./bin/acore-manager doctor
 ```
 
+If `install-services` is reported as an unknown command on an older local checkout, run the installer script directly once:
+
+```bash
+sudo ./scripts/setup/acore-install-services.sh --force
+```
+
 See [Updating acore-manager](docs/updating-manager.md) for optional checks and the release workflow to run after a manager update.
 
 ## Common Commands

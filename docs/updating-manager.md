@@ -21,6 +21,26 @@ sudo ./bin/acore-manager install-services --force
 
 `install-services --force` backs up replaced managed unit files under `/opt/acore-manager/backups/systemd/<timestamp>/` and backs up restart cron changes under `/opt/acore-manager/backups/cron/<timestamp>/`.
 
+## Older Dispatcher Fallback
+
+If the local dispatcher is older and reports:
+
+```text
+Error: unknown command: install-services
+```
+
+run the installer script directly:
+
+```bash
+sudo ./scripts/setup/acore-install-services.sh --force
+```
+
+That performs the same service/template update as the wrapper command. After the repository has been pulled to a version containing the newer dispatcher, future runs can use:
+
+```bash
+sudo ./bin/acore-manager install-services --force
+```
+
 ## Optional Checks
 
 ```bash
