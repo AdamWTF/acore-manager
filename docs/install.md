@@ -38,7 +38,8 @@ The bootstrap script:
 - creates the configured `ACORE_USER` and `ACORE_GROUP` if missing
 - creates standard directories under `/opt/acore-manager`
 - copies default config examples into `config/local/` only when missing
-- installs systemd service templates without overwriting existing service files unless `--force` is used
+- installs systemd service templates, backing up replaced units when `--force` is used
+- enables and starts the safe shutdown hook
 - installs and enables idle sleep proxy/monitor services when `SLEEP_ENABLED` is true
 - starts idle sleep services only when the auth backend/public port split is already configured
 
@@ -49,6 +50,14 @@ sudo ./scripts/setup/acore-bootstrap.sh --force
 ```
 
 The bootstrap does not build AzerothCore and does not enable or start the auth/world services. Idle sleep services are enabled by default, but are started only after `authserver.conf` is ready for the proxy/backend port split.
+
+To install or update only the managed systemd units on an existing server:
+
+```bash
+sudo ./bin/acore-manager install-services --force
+```
+
+Existing unit files are backed up under `/opt/acore-manager/backups/systemd/<timestamp>/` before replacement. This command reloads systemd and enables/starts `acore-manager-shutdown.service`, but it does not restart live auth/world services.
 
 ## Permission Denied Recovery
 

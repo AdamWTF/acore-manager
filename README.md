@@ -60,6 +60,16 @@ Minimal operational flow:
 ./bin/acore-manager logs-world
 ```
 
+Safe shutdown and reboot handling:
+
+```bash
+sudo ./bin/acore-manager install-services
+./bin/acore-manager sleep-status
+sudo ./bin/acore-manager safe-stop
+sudo ./bin/acore-manager reboot
+systemctl status acore-manager-shutdown.service
+```
+
 ## Documentation
 
 - [Full Server Setup](docs/full-server-setup.md)

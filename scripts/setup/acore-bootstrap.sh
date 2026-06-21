@@ -147,26 +147,6 @@ copy_if_missing() {
   fi
 }
 
-install_service_template() {
-  local source_file="$1"
-  local service_name="$2"
-  local dest_file="/etc/systemd/system/$service_name"
-
-  if [[ ! -f "$source_file" ]]; then
-    echo "WARN: service template missing: $source_file"
-    return
-  fi
-
-  if [[ -e "$dest_file" && "$FORCE" != "true" ]]; then
-    echo "Leaving existing service unchanged: $dest_file"
-    echo "Use --force to overwrite it from $source_file"
-    return
-  fi
-
-  echo "Installing service template: $dest_file"
-  install -m 0644 "$source_file" "$dest_file"
-}
-
 install_local_config_examples() {
   log "Preparing local config files"
 
@@ -180,29 +160,17 @@ install_local_config_examples() {
 }
 
 install_systemd_templates() {
+  local installer="$ACM_REPO_ROOT/scripts/setup/acore-install-services.sh"
+  local args=()
+
   log "Installing systemd service templates"
 
-  install_service_template \
-    "$ACM_REPO_ROOT/systemd/azerothcore-auth.service" \
-    "$AUTH_SERVICE"
-
-  install_service_template \
-    "$ACM_REPO_ROOT/systemd/azerothcore-world.service" \
-    "$WORLD_SERVICE"
-
-  install_service_template \
-    "$ACM_REPO_ROOT/systemd/acore-sleep-monitor.service" \
-    "acore-sleep-monitor.service"
-
-  install_service_template \
-    "$ACM_REPO_ROOT/systemd/acore-sleep-proxy.service" \
-    "acore-sleep-proxy.service"
-
-  if command -v systemctl >/dev/null 2>&1; then
-    systemctl daemon-reload
-  else
-    echo "WARN: systemctl is not available; skipped daemon-reload"
+  [[ -f "$installer" ]] || die "service installer is missing: $installer"
+  if [[ "$FORCE" == "true" ]]; then
+    args+=(--force)
   fi
+
+  bash "$installer" "${args[@]}"
 }
 
 configured_realm_port() {
@@ -294,6 +262,7 @@ Next steps:
      $ACM_REPO_ROOT/scripts/releases/acore-switch-release.sh <release-name>
 
 Auth/world services were installed as templates only. They were not enabled or started.
+The safe shutdown hook was enabled and started so it can run during host shutdown.
 Idle sleep services are enabled by default when SLEEP_ENABLED is true. They are
 started only after authserver.conf is ready for the proxy/backend port split.
 EOF

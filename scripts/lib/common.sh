@@ -136,3 +136,180 @@ sleep_thaw_if_enabled() {
     "$thaw_script" --quiet || echo "WARN: unable to thaw sleep-managed processes"
   fi
 }
+
+systemd_available() {
+  command -v systemctl >/dev/null 2>&1
+}
+
+systemd_unit_exists() {
+  local service="$1"
+
+  systemd_available || return 1
+  systemctl list-unit-files "$service" --no-legend 2>/dev/null | awk -v service="$service" '$1 == service { found = 1 } END { exit !found }' && return 0
+  systemctl cat "$service" >/dev/null 2>&1 && return 0
+  return 1
+}
+
+unit_active() {
+  local service="$1"
+
+  systemd_available || return 1
+  systemctl is-active --quiet "$service" 2>/dev/null
+}
+
+unit_failed() {
+  local service="$1"
+
+  systemd_available || return 1
+  systemctl is-failed --quiet "$service" 2>/dev/null
+}
+
+unit_state() {
+  local service="$1"
+
+  if ! systemd_available; then
+    echo "systemctl-unavailable"
+    return
+  fi
+
+  systemctl is-active "$service" 2>/dev/null || true
+}
+
+stop_unit_if_present() {
+  local service="$1"
+  local label="${2:-$service}"
+
+  if ! systemd_available; then
+    echo "WARN: systemctl is not available; skipped $label"
+    return 0
+  fi
+
+  if ! systemd_unit_exists "$service"; then
+    echo "Skipping $label: unit not installed ($service)"
+    return 0
+  fi
+
+  if unit_active "$service" || unit_failed "$service"; then
+    echo "Stopping $label: $service"
+    systemctl stop "$service" || return 1
+  else
+    echo "Skipping $label: state=$(unit_state "$service") ($service)"
+  fi
+}
+
+service_main_pid() {
+  local service="$1"
+  local pid=""
+
+  if systemd_available; then
+    pid="$(systemctl show -P MainPID "$service" 2>/dev/null || true)"
+    if [[ "$pid" =~ ^[0-9]+$ && "$pid" -gt 0 ]]; then
+      echo "$pid"
+      return
+    fi
+  fi
+}
+
+process_command_matches() {
+  local pid="$1"
+  local binary="$2"
+  local command_line
+
+  command_line="$(ps -o args= -p "$pid" 2>/dev/null || true)"
+  [[ "$command_line" == *"/$binary"* || "$command_line" == "$binary"* ]]
+}
+
+runtime_pids_for_service() {
+  local service="$1"
+  local binary="$2"
+  local pid
+  local seen=" "
+
+  pid="$(service_main_pid "$service")"
+  if [[ -n "$pid" ]]; then
+    echo "$pid"
+    seen+=" $pid "
+  fi
+
+  command -v pgrep >/dev/null 2>&1 || return 0
+
+  while IFS= read -r pid; do
+    [[ -n "$pid" ]] || continue
+    [[ "$seen" == *" $pid "* ]] && continue
+    if process_command_matches "$pid" "$binary"; then
+      echo "$pid"
+      seen+=" $pid "
+    fi
+  done < <(pgrep -x "$binary" 2>/dev/null || true)
+
+  while IFS= read -r pid; do
+    [[ -n "$pid" ]] || continue
+    [[ "$seen" == *" $pid "* ]] && continue
+    if process_command_matches "$pid" "$binary"; then
+      echo "$pid"
+      seen+=" $pid "
+    fi
+  done < <(pgrep -f "$CURRENT_LINK/bin/$binary" 2>/dev/null || true)
+}
+
+auth_pids() {
+  runtime_pids_for_service "$AUTH_SERVICE" "authserver"
+}
+
+world_pids() {
+  runtime_pids_for_service "$WORLD_SERVICE" "worldserver"
+}
+
+process_state() {
+  local pid="$1"
+
+  ps -o state= -p "$pid" 2>/dev/null | tr -d ' ' || true
+}
+
+process_is_frozen() {
+  local pid="$1"
+  local state
+
+  [[ -n "$pid" ]] || return 1
+  state="$(process_state "$pid")"
+  [[ "$state" == *T* ]]
+}
+
+child_pids() {
+  local pid="$1"
+
+  pgrep -P "$pid" 2>/dev/null || true
+}
+
+send_signal_to_tree() {
+  local signal="$1"
+  local pid="$2"
+  local child
+
+  for child in $(child_pids "$pid"); do
+    kill "-$signal" "$child" 2>/dev/null || true
+  done
+  kill "-$signal" "$pid" 2>/dev/null || true
+}
+
+thaw_frozen_pids() {
+  local label="$1"
+  shift
+  local pid state thawed=false
+
+  for pid in "$@"; do
+    [[ -n "$pid" ]] || continue
+    state="$(process_state "$pid")"
+    if [[ -z "$state" ]]; then
+      echo "Skipping $label process: already gone (pid=$pid)"
+    elif [[ "$state" == *T* ]]; then
+      echo "Thawing $label process: pid=$pid state=$state"
+      send_signal_to_tree CONT "$pid"
+      thawed=true
+    else
+      echo "Skipping $label process: not frozen (pid=$pid state=$state)"
+    fi
+  done
+
+  [[ "$thawed" == "true" ]]
+}

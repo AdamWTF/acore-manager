@@ -20,6 +20,7 @@ Risk levels:
 | `link-configs` | Link shared configs into the active release. | `scripts/config/acore-link-shared-configs.sh` | Usually yes | Safe | `sudo ./bin/acore-manager link-configs` |
 | `check-data` | Check shared data directories and `worldserver.conf` `DataDir`. | `scripts/config/acore-check-data.sh` | No | Read-only | `./bin/acore-manager check-data` |
 | `config-diff` | Compare live configs against matching `.dist` files when available. | `scripts/config/acore-config-diff.sh` | Usually no | Read-only | `./bin/acore-manager config-diff` |
+| `install-services` | Install/update managed systemd units with backups and enable the shutdown hook. | `scripts/setup/acore-install-services.sh` | Yes | Safe; does not restart auth/world | `sudo ./bin/acore-manager install-services --force` |
 
 Direct setup scripts:
 
@@ -58,10 +59,13 @@ Direct release script not exposed by the wrapper:
 | --- | --- | --- | --- | --- | --- |
 | `start` | Start auth then world services. | `scripts/runtime/acore-start.sh` | Yes | Disruptive | `sudo ./bin/acore-manager start` |
 | `stop` | Stop world then auth services. | `scripts/runtime/acore-stop.sh` | Yes | Disruptive | `sudo ./bin/acore-manager stop` |
+| `safe-stop` | Stop sleep monitor, thaw frozen auth/world processes, stop services, and verify shutdown-safe state. | `scripts/runtime/acore-safe-stop.sh` | Yes | Disruptive but idempotent | `sudo ./bin/acore-manager safe-stop` |
+| `reboot` | Run `safe-stop`, then reboot with `systemctl reboot`; refuses reboot on failure unless `--force` is used. | `scripts/runtime/acore-reboot.sh` | Yes | Disruptive | `sudo ./bin/acore-manager reboot` |
 | `restart` | Stop world/auth, then start auth/world. | `scripts/runtime/acore-restart.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart` |
 | `restart-world` | Restart world service only. | `scripts/runtime/acore-restart-world.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart-world` |
 | `restart-auth` | Restart auth service only. | `scripts/runtime/acore-restart-auth.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart-auth` |
 | `sleep-status` | Show idle sleep config, services, ports, world connections, and process state. | `scripts/power/acore-sleep-status.sh` | Sometimes for full service details | Read-only | `./bin/acore-manager sleep-status` |
+| `thaw` | Resume frozen auth/world processes; alias for `sleep-thaw`. | `scripts/power/acore-sleep-thaw.sh` | Usually yes | Safe | `sudo ./bin/acore-manager thaw` |
 | `sleep-thaw` | Resume frozen auth/world processes. | `scripts/power/acore-sleep-thaw.sh` | Usually yes | Safe | `sudo ./bin/acore-manager sleep-thaw` |
 | `sleep-freeze` | Freeze auth/world processes after readiness checks. Use `--force` for an immediate manual freeze. | `scripts/power/acore-sleep-freeze.sh` | Usually yes | Disruptive | `sudo ./bin/acore-manager sleep-freeze` |
 | `fix-runtime-paths` | Check installed systemd units for `build/staging` runtime paths; `--apply` reinstalls current-based templates. | `scripts/runtime/acore-fix-runtime-paths.sh` | Yes | Safe without `--apply`; disruptive config change with `--apply` | `sudo ./bin/acore-manager fix-runtime-paths --apply` |
@@ -103,7 +107,4 @@ See [Idle Sleep](power-sleep.md) for the default sleep proxy and monitor service
 
 ## Troubleshooting Gaps
 
-Useful commands that are not currently implemented:
-
-- `install-services`: bootstrap installs service templates, but there is no separate wrapper command just for service installation.
 - `check-db` / `backup-db`: use the implemented `db-check` and `db-backup` command names.

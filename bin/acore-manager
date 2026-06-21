@@ -14,10 +14,13 @@ Commands:
   validate         Validate config and required commands
   start            Start auth and world services
   stop             Stop world and auth services
+  safe-stop        Sleep-aware safe stop for maintenance, poweroff, or reboot
+  reboot           Run safe-stop, then reboot the host
   restart          Restart world and auth services safely
   restart-world    Restart world service
   restart-auth     Restart auth service
   sleep-status     Show idle sleep proxy, monitor, port, and process status
+  thaw             Resume frozen auth and world processes
   sleep-thaw       Resume frozen auth and world processes
   sleep-freeze     Freeze auth and world processes after readiness checks
   logs-world       Follow world service logs
@@ -40,6 +43,7 @@ Commands:
   check-data       Check required AzerothCore data directories
   validate-runtime Validate active release, shared config links, and data
   fix-runtime-paths Check/fix installed systemd units that reference staging
+  install-services Install/update managed systemd unit files with backups
 EOF
 }
 
@@ -56,10 +60,13 @@ script_for_command() {
     validate) echo "scripts/config/acore-validate-config.sh" ;;
     start) echo "scripts/runtime/acore-start.sh" ;;
     stop) echo "scripts/runtime/acore-stop.sh" ;;
+    safe-stop) echo "scripts/runtime/acore-safe-stop.sh" ;;
+    reboot) echo "scripts/runtime/acore-reboot.sh" ;;
     restart) echo "scripts/runtime/acore-restart.sh" ;;
     restart-world) echo "scripts/runtime/acore-restart-world.sh" ;;
     restart-auth) echo "scripts/runtime/acore-restart-auth.sh" ;;
     sleep-status) echo "scripts/power/acore-sleep-status.sh" ;;
+    thaw) echo "scripts/power/acore-sleep-thaw.sh" ;;
     sleep-thaw) echo "scripts/power/acore-sleep-thaw.sh" ;;
     sleep-freeze) echo "scripts/power/acore-sleep-freeze.sh" ;;
     logs-world) echo "scripts/logs/acore-logs-world.sh" ;;
@@ -82,6 +89,7 @@ script_for_command() {
     check-data) echo "scripts/config/acore-check-data.sh" ;;
     validate-runtime) echo "scripts/config/acore-validate-runtime.sh" ;;
     fix-runtime-paths) echo "scripts/runtime/acore-fix-runtime-paths.sh" ;;
+    install-services) echo "scripts/setup/acore-install-services.sh" ;;
     *) return 1 ;;
   esac
 }

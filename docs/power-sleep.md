@@ -94,9 +94,12 @@ journalctl -u acore-sleep-monitor.service -n 100 --no-pager
 
 ```bash
 ./bin/acore-manager sleep-status
+sudo ./bin/acore-manager thaw
 sudo ./bin/acore-manager sleep-thaw
 sudo ./bin/acore-manager sleep-freeze
 ```
+
+`thaw` and `sleep-thaw` are equivalent. They send `SIGCONT` only to detected auth/world processes that are actually frozen in Linux state `T`.
 
 `sleep-freeze` uses the same startup readiness gate as the monitor. To force an immediate manual freeze anyway:
 
@@ -104,7 +107,25 @@ sudo ./bin/acore-manager sleep-freeze
 sudo ./bin/acore-manager sleep-freeze --force
 ```
 
-Normal `stop`, `restart`, `restart-world`, `restart-auth`, `switch-release`, and `rollback` commands thaw processes first when sleep mode is enabled.
+Normal `stop`, `restart`, `restart-world`, `restart-auth`, `switch-release`, and `rollback` commands thaw processes first when sleep mode is enabled. For host poweroff or reboot, prefer:
+
+```bash
+sudo ./bin/acore-manager safe-stop
+sudo ./bin/acore-manager reboot
+```
+
+`safe-stop` also stops the sleep monitor before thawing so the monitor cannot immediately freeze the processes again during shutdown.
+
+## Safe Shutdown Hook
+
+Install or update managed systemd units on an existing server with:
+
+```bash
+sudo ./bin/acore-manager install-services --force
+systemctl status acore-manager-shutdown.service
+```
+
+Existing unit files are backed up under `/opt/acore-manager/backups/systemd/<timestamp>/`. The shutdown hook runs `safe-stop --host-shutdown` automatically when the host is shutting down or rebooting. It does not require auth/world services and does not start AzerothCore.
 
 ## Roll Back Sleep Mode
 

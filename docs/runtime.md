@@ -16,15 +16,13 @@ The service templates in `systemd/` point at:
 
 `/opt/acore-manager/current` is the only active runtime path. `/opt/acore-manager/build/staging` is temporary build output and must not be used by systemd services, runtime scripts, or user-managed configs.
 
-Bootstrap installs these templates when possible, but does not enable or start them. If needed, install them manually:
+Bootstrap installs these templates when possible, but does not enable or start auth/world services. To install or update managed service files on an existing server:
 
 ```bash
-sudo cp systemd/azerothcore-auth.service /etc/systemd/system/azerothcore-auth.service
-sudo cp systemd/azerothcore-world.service /etc/systemd/system/azerothcore-world.service
-sudo systemctl daemon-reload
-sudo systemctl enable azerothcore-auth.service
-sudo systemctl enable azerothcore-world.service
+sudo ./bin/acore-manager install-services --force
 ```
+
+Existing unit files are backed up under `/opt/acore-manager/backups/systemd/<timestamp>/` before replacement. The command reloads systemd and enables/starts `acore-manager-shutdown.service`, but it does not restart live auth/world services.
 
 Prepare databases, data files, and configs before starting services. See [Full Server Setup](full-server-setup.md).
 
@@ -72,6 +70,7 @@ Runtime start and restart commands check installed systemd units before touching
 ```bash
 ./bin/acore-manager start
 ./bin/acore-manager stop
+./bin/acore-manager safe-stop
 ./bin/acore-manager restart
 ./bin/acore-manager restart-world
 ./bin/acore-manager restart-auth
@@ -96,6 +95,45 @@ systemctl status azerothcore-world.service --no-pager
 ```
 
 Recommended startup order is database first, then authserver, then worldserver, then client login testing.
+
+## Safe Shutdown And Reboot Handling
+
+Sleep mode can freeze `authserver` or `worldserver` with `SIGSTOP`. A frozen process is still alive in Linux process state `T`, so host shutdown should thaw it before stopping services.
+
+Use:
+
+```bash
+./bin/acore-manager sleep-status
+sudo ./bin/acore-manager thaw
+sudo ./bin/acore-manager safe-stop
+sudo ./bin/acore-manager reboot
+systemctl status acore-manager-shutdown.service
+```
+
+`safe-stop` stops the sleep monitor first, thaws frozen auth/world processes with `SIGCONT`, stops world, stops auth, stops the sleep proxy if present, and verifies that no auth/world process remains. It is idempotent and skips missing optional services.
+
+`reboot` runs `safe-stop` first and refuses to reboot if safe-stop fails. Use `--force` only when you have accepted the risk:
+
+```bash
+sudo ./bin/acore-manager reboot --force
+```
+
+The shutdown hook is installed as `acore-manager-shutdown.service`. It uses systemd's `ExecStop` path to run:
+
+```bash
+/opt/acore-manager/bin/acore-manager safe-stop --host-shutdown
+```
+
+It does not require auth/world services and must not start AzerothCore during host shutdown.
+
+Manual validation checklist:
+
+- Fresh install: run `sudo ./scripts/setup/acore-bootstrap.sh`, confirm `systemctl status acore-manager-shutdown.service`, then run `./bin/acore-manager sleep-status`.
+- Existing install: run `sudo ./bin/acore-manager install-services --force`, confirm unit backups under `/opt/acore-manager/backups/systemd/`, and confirm live auth/world services were not restarted.
+- Awake server: with world active, run `sudo ./bin/acore-manager safe-stop` and confirm world/auth stop cleanly.
+- Frozen server: freeze a test process or AzerothCore PID with `sudo kill -STOP <pid>`, confirm `./bin/acore-manager sleep-status` reports frozen or mixed, then confirm `safe-stop` thaws and stops it.
+- Already stopped server: run `sudo ./bin/acore-manager safe-stop` and confirm it exits successfully.
+- Missing optional services: remove or disable proxy/monitor units in a test environment and confirm `safe-stop` skips them without failing.
 
 ## Logs
 

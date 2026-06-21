@@ -1,0 +1,21 @@
+# Generic acore-manager host shutdown hook.
+# Install to /etc/systemd/system/acore-manager-shutdown.service and enable it.
+# ExecStop runs during host shutdown because RemainAfterExit keeps the oneshot
+# service active after ExecStart succeeds.
+
+[Unit]
+Description=AzerothCore safe shutdown before host poweroff/reboot
+DefaultDependencies=no
+Before=shutdown.target reboot.target halt.target poweroff.target
+RequiresMountsFor=/opt/acore-manager
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/opt/acore-manager/bin/acore-manager safe-stop --host-shutdown
+TimeoutStopSec=180
+
+[Install]
+WantedBy=multi-user.target
+

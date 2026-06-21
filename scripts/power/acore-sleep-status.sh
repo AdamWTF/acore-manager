@@ -23,6 +23,72 @@ show_pids() {
   done
 }
 
+component_state() {
+  local service="$1"
+  shift
+  local pid
+  local has_pid=false
+  local has_frozen=false
+
+  if systemd_unit_exists "$service" && unit_failed "$service"; then
+    echo "failed"
+    return
+  fi
+
+  for pid in "$@"; do
+    [[ -n "$pid" ]] || continue
+    if [[ -n "$(process_state "$pid")" ]]; then
+      has_pid=true
+      if process_is_frozen "$pid"; then
+        has_frozen=true
+      fi
+    fi
+  done
+
+  if [[ "$has_frozen" == "true" ]]; then
+    echo "frozen"
+  elif [[ "$has_pid" == "true" ]] || { systemd_unit_exists "$service" && unit_active "$service"; }; then
+    echo "awake"
+  else
+    echo "offline"
+  fi
+}
+
+overall_state() {
+  local auth_state="$1"
+  local world_state="$2"
+
+  if [[ "$auth_state" == "failed" || "$world_state" == "failed" ]]; then
+    echo "failed"
+  elif [[ "$auth_state" == "$world_state" ]]; then
+    case "$auth_state" in
+      offline) echo "offline" ;;
+      awake) echo "awake" ;;
+      frozen) echo "asleep/frozen" ;;
+      *) echo "partial/mixed" ;;
+    esac
+  elif [[ "$auth_state" == "frozen" || "$world_state" == "frozen" ]]; then
+    echo "partial/mixed"
+  else
+    echo "partial/mixed"
+  fi
+}
+
+mapfile -t auth < <(auth_pids)
+mapfile -t world < <(world_pids)
+auth_state="$(component_state "$AUTH_SERVICE" "${auth[@]}")"
+world_state="$(component_state "$WORLD_SERVICE" "${world[@]}")"
+
+log "AzerothCore Sleep State"
+echo "Overall: $(overall_state "$auth_state" "$world_state")"
+echo "Auth: $auth_state"
+echo "World: $world_state"
+if [[ "$auth_state" == "failed" || "$world_state" == "failed" ]]; then
+  echo "WARN: systemd reports one or more failed units."
+elif [[ "$auth_state" == "frozen" || "$world_state" == "frozen" ]]; then
+  echo "Frozen processes are live Linux processes in state T; run safe-stop before host shutdown."
+fi
+
 log "Sleep Configuration"
 echo "Enabled: ${SLEEP_ENABLED:-false}"
 echo "Check interval: ${SLEEP_CHECK_INTERVAL:-}"
@@ -38,7 +104,7 @@ echo "State dir: ${SLEEP_STATE_DIR:-}"
 
 log "Sleep Services"
 if command -v systemctl >/dev/null 2>&1; then
-  for service in acore-sleep-proxy.service acore-sleep-monitor.service; do
+  for service in acore-sleep-proxy.service acore-sleep-monitor.service azerothcore-auth-proxy.service azerothcore-monitor.service; do
     echo "$service active: $(systemctl is-active "$service" 2>/dev/null || true)"
     echo "$service enabled: $(systemctl is-enabled "$service" 2>/dev/null || true)"
   done
@@ -67,8 +133,6 @@ fi
 
 log "Processes"
 if command -v ps >/dev/null 2>&1 && command -v pgrep >/dev/null 2>&1; then
-  mapfile -t auth < <(auth_pids)
-  mapfile -t world < <(world_pids)
   show_pids "Auth" "${auth[@]}"
   show_pids "World" "${world[@]}"
   if [[ "${#world[@]}" -gt 0 ]]; then

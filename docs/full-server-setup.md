@@ -56,7 +56,7 @@ chmod +x bin/acore-manager 2>/dev/null || true
 sudo ./scripts/setup/acore-bootstrap.sh
 ```
 
-Bootstrap installs typical build dependencies, creates the configured service user/group, creates the standard directories, creates local config files only when missing, and installs systemd templates without enabling or starting services.
+Bootstrap installs typical build dependencies, creates the configured service user/group, creates the standard directories, creates local config files only when missing, installs systemd templates without enabling or starting auth/world services, and enables the safe shutdown hook.
 
 Review these files before continuing:
 
@@ -361,15 +361,13 @@ Back up before real release switches or risky maintenance:
 
 ## Install systemd Services
 
-Bootstrap installs templates to `/etc/systemd/system/` when they are present. If you need to do it manually:
+Bootstrap installs templates to `/etc/systemd/system/` when they are present. To install or update managed service files on a fresh or existing server:
 
 ```bash
-sudo cp systemd/azerothcore-auth.service /etc/systemd/system/azerothcore-auth.service
-sudo cp systemd/azerothcore-world.service /etc/systemd/system/azerothcore-world.service
-sudo systemctl daemon-reload
-sudo systemctl enable azerothcore-auth.service
-sudo systemctl enable azerothcore-world.service
+sudo ./bin/acore-manager install-services --force
 ```
+
+Existing unit files are backed up under `/opt/acore-manager/backups/systemd/<timestamp>/` before replacement. This reloads systemd and enables/starts `acore-manager-shutdown.service`, but it does not restart live auth/world services.
 
 Each copied service should execute:
 
@@ -541,7 +539,3 @@ Rollback also relinks shared configs into the rollback target. It does not resto
 - Module build failure: confirm module branch compatibility with your AzerothCore source.
 - PlayerBots compatibility issue: use a known compatible AzerothCore fork/branch or pin matching revisions.
 - GCC 15 / jemalloc failure: set `CMAKE_EXTRA_FLAGS="-DNOJEM=1"` locally and rebuild. See [Troubleshooting](troubleshooting.md).
-
-## TODOs
-
-- Add an `install-services` command for users who skip bootstrap.

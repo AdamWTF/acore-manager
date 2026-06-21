@@ -48,41 +48,6 @@ clear_sleep_skip_reason() {
   rm -f "$SLEEP_STATE_DIR/last-sleep-skip-reason" 2>/dev/null || true
 }
 
-service_main_pid() {
-  local service="$1"
-  local pid=""
-
-  if command -v systemctl >/dev/null 2>&1; then
-    pid="$(systemctl show -P MainPID "$service" 2>/dev/null || true)"
-    if [[ "$pid" =~ ^[0-9]+$ && "$pid" -gt 0 ]]; then
-      echo "$pid"
-      return
-    fi
-  fi
-}
-
-runtime_pids_for_service() {
-  local service="$1"
-  local binary="$2"
-  local pid
-
-  pid="$(service_main_pid "$service")"
-  if [[ -n "$pid" ]]; then
-    echo "$pid"
-    return
-  fi
-
-  pgrep -f "$CURRENT_LINK/bin/$binary" 2>/dev/null || true
-}
-
-auth_pids() {
-  runtime_pids_for_service "$AUTH_SERVICE" "authserver"
-}
-
-world_pids() {
-  runtime_pids_for_service "$WORLD_SERVICE" "worldserver"
-}
-
 first_world_pid() {
   local pid
 
@@ -92,13 +57,6 @@ first_world_pid() {
       return
     fi
   done
-}
-
-process_is_frozen() {
-  local pid="$1"
-
-  [[ -n "$pid" ]] || return 1
-  ps -o state= -p "$pid" 2>/dev/null | grep -q "T"
 }
 
 process_uptime_seconds() {
@@ -169,23 +127,6 @@ sleep_readiness_gate() {
 
   clear_sleep_skip_reason
   return 0
-}
-
-child_pids() {
-  local pid="$1"
-
-  pgrep -P "$pid" 2>/dev/null || true
-}
-
-send_signal_to_tree() {
-  local signal="$1"
-  local pid="$2"
-  local child
-
-  for child in $(child_pids "$pid"); do
-    kill "-$signal" "$child" 2>/dev/null || true
-  done
-  kill "-$signal" "$pid" 2>/dev/null || true
 }
 
 world_connection_count() {

@@ -19,6 +19,8 @@ WorkingDirectory=/opt/acore-manager/current
 ExecStart=/opt/acore-manager/current/bin/worldserver
 Restart=on-failure
 RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=180
 
 [Install]
 WantedBy=multi-user.target
