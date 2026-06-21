@@ -57,6 +57,8 @@ Minimal operational flow:
 ./bin/acore-manager check-data
 ./bin/acore-manager switch-release <release-name>
 ./bin/acore-manager status
+./bin/acore-manager doctor
+./bin/acore-manager backup-all
 ./bin/acore-manager logs-world
 ```
 

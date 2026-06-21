@@ -5,7 +5,46 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/common.sh"
 
-keep_count="${ACORE_RELEASE_KEEP_COUNT:-${1:-5}}"
+APPLY=false
+keep_count="${ACORE_RELEASE_KEEP_COUNT:-5}"
+
+usage() {
+  cat <<EOF
+Usage:
+  $0 [--keep N] [--dry-run]
+  $0 [--keep N] --apply
+
+Dry-run is the default. --apply is required to delete releases.
+EOF
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --keep)
+      keep_count="${2:-}"
+      shift
+      ;;
+    --dry-run)
+      APPLY=false
+      ;;
+    --apply)
+      APPLY=true
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      if [[ "$1" =~ ^[0-9]+$ ]]; then
+        keep_count="$1"
+      else
+        die "unknown argument: $1"
+      fi
+      ;;
+  esac
+  shift
+done
+
 [[ "$keep_count" =~ ^[0-9]+$ ]] || die "keep count must be a non-negative integer: $keep_count"
 
 active_release=""
@@ -16,7 +55,15 @@ if [[ -L "$CURRENT_LINK" ]]; then
   fi
 fi
 
-[[ -d "$RELEASES_DIR" ]] || die "RELEASES_DIR does not exist: $RELEASES_DIR"
+if [[ ! -d "$RELEASES_DIR" ]]; then
+  if [[ "$APPLY" == "true" ]]; then
+    die "RELEASES_DIR does not exist: $RELEASES_DIR"
+  fi
+  log "Pruning releases"
+  echo "Releases directory does not exist yet: $RELEASES_DIR"
+  echo "Dry-run only. Nothing would be pruned."
+  exit 0
+fi
 
 mapfile -t releases < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -r)
 
@@ -37,6 +84,7 @@ log "Pruning releases"
 echo "Releases directory: $RELEASES_DIR"
 echo "Keep recent count: $keep_count"
 echo "Active release: ${active_release:-none}"
+echo "Mode: $([[ "$APPLY" == "true" ]] && echo apply || echo dry-run)"
 echo
 
 for release in "${releases[@]}"; do
@@ -45,7 +93,16 @@ for release in "${releases[@]}"; do
   if [[ -n "${keep[$release]:-}" ]]; then
     echo "Keeping: $release"
   else
-    echo "Pruning: $release"
-    rm -rf -- "$release_dir"
+    if [[ "$APPLY" == "true" ]]; then
+      echo "Pruning: $release"
+      rm -rf -- "$release_dir"
+    else
+      echo "Would prune: $release"
+    fi
   fi
 done
+
+if [[ "$APPLY" != "true" ]]; then
+  echo
+  echo "Dry-run only. Re-run with --apply to delete listed releases."
+fi

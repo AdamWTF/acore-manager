@@ -104,6 +104,8 @@ Existing shared configs are not overwritten. Edit shared configs, not release-lo
 
 ```bash
 ./bin/acore-manager list-releases
+./bin/acore-manager release-report <release-name>
+./bin/acore-manager switch-release --dry-run <release-name>
 sudo ./bin/acore-manager switch-release <release-name>
 ```
 
@@ -134,3 +136,17 @@ On a first server, prepare data files and configs before switching, because `swi
 This orchestrates validation, DB check, source/module updates, build, release creation, optional config backup, release switch, and final status. It calls the smaller scripts rather than duplicating their logic.
 
 Use the high-level workflow only after the manual flow is understood and the server already has working data, configs, databases, and services.
+
+## Prune Releases
+
+Preview pruning old releases:
+
+```bash
+./bin/acore-manager prune-releases --dry-run
+```
+
+Apply deletion explicitly:
+
+```bash
+sudo ./bin/acore-manager prune-releases --keep 5 --apply
+```

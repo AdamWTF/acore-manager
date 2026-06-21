@@ -10,63 +10,90 @@
 pageTitle: acore-manager
 showFooter: false
 defaultPopupOnStart: execution-dialog
-defaultIconForActions: "⚙️"
-defaultIconForDirectories: "📁"
-defaultIconForBack: "←"
+defaultIconForActions: "action"
+defaultIconForDirectories: "folder"
+defaultIconForBack: "back"
 showNavigateOnStartIcons: false
 
 actions:
   - title: Status
     id: acore_status
-    icon: "📊"
+    icon: "status"
     shell: "/opt/acore-manager/bin/acore-manager status"
+    timeout: 30
+
+  - title: Doctor
+    id: acore_doctor
+    icon: "doctor"
+    shell: "/opt/acore-manager/bin/acore-manager doctor"
+    timeout: 120
+
+  - title: Service status
+    id: acore_service_status
+    icon: "status"
+    shell: "/opt/acore-manager/bin/acore-manager service-status"
     timeout: 30
 
   - title: List releases
     id: acore_list_releases
-    icon: "📦"
+    icon: "releases"
     shell: "/opt/acore-manager/bin/acore-manager list-releases"
+    timeout: 30
+
+  - title: List backups
+    id: acore_list_backups
+    icon: "backups"
+    shell: "/opt/acore-manager/bin/acore-manager list-backups"
     timeout: 30
 
   - title: View world logs
     id: acore_logs_world
-    icon: "📜"
+    icon: "logs"
     shell: "/opt/acore-manager/bin/acore-manager logs-world"
     timeout: 300
 
   - title: View auth logs
     id: acore_logs_auth
-    icon: "📜"
+    icon: "logs"
     shell: "/opt/acore-manager/bin/acore-manager logs-auth"
     timeout: 300
 
   - title: View recent errors
     id: acore_last_errors
-    icon: "📜"
+    icon: "logs"
     shell: "/opt/acore-manager/bin/acore-manager last-errors"
     timeout: 60
 
   - title: Check database
     id: acore_db_check
-    icon: "🗄️"
+    icon: "database"
     shell: "/opt/acore-manager/bin/acore-manager db-check"
     timeout: 60
 
   - title: Sleep status
     id: acore_sleep_status
-    icon: "📊"
+    icon: "status"
     shell: "/opt/acore-manager/bin/acore-manager sleep-status"
     timeout: 30
 
   - title: Wake sleeping server
     id: acore_sleep_thaw
-    icon: "▶️"
-    shell: "/opt/acore-manager/bin/acore-manager sleep-thaw"
+    icon: "start"
+    shell: "/opt/acore-manager/bin/acore-manager thaw"
     timeout: 30
+
+  - title: Safe stop - requires confirmation
+    id: acore_safe_stop
+    icon: "stop"
+    shell: "/opt/acore-manager/bin/acore-manager safe-stop"
+    timeout: 180
+    arguments:
+      - type: confirmation
+        title: Confirm safe stop for authserver and worldserver.
 
   - title: Sleep server now - requires confirmation
     id: acore_sleep_freeze
-    icon: "⏸️"
+    icon: "pause"
     shell: "/opt/acore-manager/bin/acore-manager sleep-freeze"
     timeout: 30
     arguments:
@@ -75,31 +102,31 @@ actions:
 
   - title: Restart worldserver
     id: acore_restart_world
-    icon: "🔄"
+    icon: "restart"
     shell: "/opt/acore-manager/bin/acore-manager restart-world"
     timeout: 120
 
   - title: Restart authserver
     id: acore_restart_auth
-    icon: "🔄"
+    icon: "restart"
     shell: "/opt/acore-manager/bin/acore-manager restart-auth"
     timeout: 120
 
   - title: Restart all AzerothCore services
     id: acore_restart_all
-    icon: "🔄"
+    icon: "restart"
     shell: "/opt/acore-manager/bin/acore-manager restart"
     timeout: 180
 
   - title: Start services
     id: acore_start
-    icon: "▶️"
+    icon: "start"
     shell: "/opt/acore-manager/bin/acore-manager start"
     timeout: 120
 
   - title: Stop services - requires confirmation
     id: acore_stop
-    icon: "⏹️"
+    icon: "stop"
     shell: "/opt/acore-manager/bin/acore-manager stop"
     timeout: 120
     arguments:
@@ -108,13 +135,22 @@ actions:
 
   - title: Config backup
     id: acore_config_backup
-    icon: "💾"
+    icon: "backup"
     shell: "/opt/acore-manager/bin/acore-manager config-backup"
     timeout: 120
 
+  - title: Backup all - requires confirmation
+    id: acore_backup_all
+    icon: "backup"
+    shell: "/opt/acore-manager/bin/acore-manager backup-all"
+    timeout: 1800
+    arguments:
+      - type: confirmation
+        title: Confirm config and database backup.
+
   - title: Database backup - requires confirmation
     id: acore_db_backup
-    icon: "💾"
+    icon: "backup"
     shell: "/opt/acore-manager/bin/acore-manager db-backup"
     timeout: 1800
     arguments:
@@ -123,7 +159,7 @@ actions:
 
   - title: Build - requires confirmation
     id: acore_build
-    icon: "🛠️"
+    icon: "build"
     shell: "/opt/acore-manager/bin/acore-manager build"
     timeout: 14400
     arguments:
@@ -132,13 +168,13 @@ actions:
 
   - title: Create release
     id: acore_create_release
-    icon: "📦"
+    icon: "release"
     shell: "/opt/acore-manager/bin/acore-manager create-release"
     timeout: 600
 
   - title: Release latest - requires confirmation
     id: acore_release_latest
-    icon: "🚀"
+    icon: "release"
     shell: "/opt/acore-manager/bin/acore-manager release-latest"
     timeout: 21600
     arguments:
@@ -147,7 +183,7 @@ actions:
 
   - title: Rollback release - requires confirmation
     id: acore_rollback
-    icon: "↩️"
+    icon: "rollback"
     shell: "/opt/acore-manager/bin/acore-manager rollback"
     timeout: 300
     arguments:
@@ -161,7 +197,10 @@ dashboards:
         type: fieldset
         contents:
           - title: Status
+          - title: Doctor
+          - title: Service status
           - title: List releases
+          - title: List backups
           - title: View world logs
           - title: View auth logs
           - title: View recent errors
@@ -172,6 +211,7 @@ dashboards:
         type: fieldset
         contents:
           - title: Wake sleeping server
+          - title: Safe stop - requires confirmation
           - title: Sleep server now - requires confirmation
           - title: Restart worldserver
           - title: Restart authserver
@@ -183,6 +223,7 @@ dashboards:
         type: fieldset
         contents:
           - title: Config backup
+          - title: Backup all - requires confirmation
           - title: Database backup - requires confirmation
           - title: Build - requires confirmation
           - title: Create release

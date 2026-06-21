@@ -115,6 +115,16 @@ This checks required variables, required commands, service names, and path statu
 
 This backs up shared configs, `config/local`, installed managed systemd service files, and `/etc/cron.d/acore-manager-restart` when present. Missing optional paths produce warnings.
 
+Related recovery commands:
+
+```bash
+./bin/acore-manager backup-all
+./bin/acore-manager list-backups
+./bin/acore-manager restore-config /opt/acore-manager/backups/config/<timestamp> --dry-run
+```
+
+`restore-config --apply` writes files back to shared config, `config/local`, `/etc/systemd/system`, and `/etc/cron.d`, then reloads systemd when available.
+
 ## Runtime Configs
 
 Live AzerothCore runtime configs belong in shared persistent storage:

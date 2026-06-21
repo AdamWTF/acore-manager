@@ -5,9 +5,36 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/common.sh"
 
-command -v systemctl >/dev/null 2>&1 || die "systemctl is not available"
+DRY_RUN=false
+release_name=""
 
-release_name="${1:-}"
+usage() {
+  cat <<EOF
+Usage:
+  $0 [--dry-run] <release-name>
+EOF
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      DRY_RUN=true
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      if [[ -z "$release_name" ]]; then
+        release_name="$1"
+      else
+        die "unknown argument: $1"
+      fi
+      ;;
+  esac
+  shift
+done
+
 [[ -n "$release_name" ]] || die "usage: $0 <release-name>"
 [[ "$release_name" != *"/"* ]] || die "release name must not contain slashes: $release_name"
 
@@ -15,6 +42,27 @@ release_dir="$RELEASES_DIR/$release_name"
 [[ -d "$release_dir" ]] || die "release does not exist: $release_dir"
 [[ -x "$release_dir/bin/authserver" ]] || die "authserver is not executable in release: $release_dir/bin/authserver"
 [[ -x "$release_dir/bin/worldserver" ]] || die "worldserver is not executable in release: $release_dir/bin/worldserver"
+
+if [[ "$DRY_RUN" == "true" ]]; then
+  log "Dry-run release switch"
+  echo "Release: $release_name"
+  echo "Path: $release_dir"
+  echo "Would stop world service: $WORLD_SERVICE"
+  echo "Would stop auth service: $AUTH_SERVICE"
+  echo "Would update current link: $CURRENT_LINK -> $release_dir"
+  echo "Would link shared configs into the selected release"
+  echo "Would start auth service: $AUTH_SERVICE"
+  echo "Would start world service: $WORLD_SERVICE"
+  if command -v systemctl >/dev/null 2>&1; then
+    validate_systemd_runtime_paths
+  else
+    echo "WARN: systemctl is not available; skipped systemd unit validation"
+  fi
+  "$ACM_REPO_ROOT/scripts/config/acore-check-data.sh" || true
+  exit 0
+fi
+
+command -v systemctl >/dev/null 2>&1 || die "systemctl is not available"
 validate_systemd_runtime_paths
 
 previous_target=""

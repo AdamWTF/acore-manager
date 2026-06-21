@@ -44,6 +44,8 @@ Runtime configs are shared and linked into the active release:
 ./bin/acore-manager status
 ./bin/acore-manager validate-runtime
 ./bin/acore-manager sleep-status
+./bin/acore-manager service-status
+./bin/acore-manager doctor
 ```
 
 Shows active release, service status, common ports, disk usage, memory usage, and source commit information.
@@ -186,6 +188,7 @@ sudo ./bin/acore-manager install-services --force
 ```bash
 ./bin/acore-manager logs-world
 ./bin/acore-manager logs-auth
+./bin/acore-manager logs --service world --lines 100
 ./bin/acore-manager last-errors
 ```
 
