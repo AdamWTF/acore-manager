@@ -5,6 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/common.sh"
 
+acquire_acm_lock build
+acquire_acm_lock release
+
 command -v git >/dev/null 2>&1 || die "git is not available"
 
 STAGING_DIR="$BUILD_DIR/staging"

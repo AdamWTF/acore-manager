@@ -47,6 +47,10 @@ done
 
 [[ "$keep_count" =~ ^[0-9]+$ ]] || die "keep count must be a non-negative integer: $keep_count"
 
+if [[ "$APPLY" == "true" ]]; then
+  acquire_acm_lock release
+fi
+
 active_release=""
 if [[ -L "$CURRENT_LINK" ]]; then
   active_target="$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)"

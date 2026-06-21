@@ -69,6 +69,15 @@ The `--apply` mode backs up affected unit files, installs the current-based temp
 
 Runtime start and restart commands check installed systemd units before touching services. If a unit still references `build/staging`, the command fails and tells you to run `fix-runtime-paths` first.
 
+Clean build commands are build-maintenance only:
+
+```bash
+./bin/acore-manager clean-build --dry-run
+./bin/acore-manager rebuild --clean
+```
+
+They do not stop services, switch releases, or restart auth/world. Runtime changes happen only when you explicitly run `switch-release`, `rollback`, `start`, `stop`, `restart`, `safe-stop`, or `reboot`.
+
 ## Service Control
 
 ```bash

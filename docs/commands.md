@@ -42,6 +42,8 @@ Direct setup scripts:
 | Command | Purpose | Script | Needs sudo? | Risk | Example |
 | --- | --- | --- | --- | --- | --- |
 | `build` | Build AzerothCore into `BUILD_DIR/staging`. | `scripts/build/acore-build.sh` | Depends on install ownership | Disruptive: long-running CPU/disk work | `./bin/acore-manager build` |
+| `clean-build` | Remove generated build artifacts only. | `scripts/build/acore-clean-build.sh` | Depends on build directory ownership | Safe; deletes only build output | `./bin/acore-manager clean-build --dry-run` |
+| `rebuild` | Run the build workflow, optionally after `clean-build`. | `scripts/build/acore-rebuild.sh` | Depends on build directory ownership | Disruptive: long-running CPU/disk work | `./bin/acore-manager rebuild --clean` |
 | `create-release` | Create a timestamped release from staging. | `scripts/build/acore-create-release.sh` | Depends on install ownership | Safe | `./bin/acore-manager create-release` |
 | `release-latest` | Run validate, DB check, source/module update, build, release, shared config preparation, optional config backup, switch, and status. | `scripts/build/acore-release-latest.sh` | Usually yes | Disruptive | `sudo ./bin/acore-manager release-latest` |
 | `list-releases` | List releases and mark the active one. | `scripts/releases/acore-list-releases.sh` | No | Read-only | `./bin/acore-manager list-releases` |
@@ -95,9 +97,10 @@ Direct setup scripts:
 | --- | --- | --- | --- | --- | --- |
 | `config-backup` | Back up shared configs, `config/local`, managed systemd units, and restart cron when present. | `scripts/config/acore-config-backup.sh` | Sometimes | Safe | `./bin/acore-manager config-backup` |
 | `backup-all` | Run config and DB backups and write a combined manifest. | `scripts/backup/acore-backup-all.sh` | Depends on backup ownership and DB credentials | Safe | `./bin/acore-manager backup-all` |
-| `list-backups` | List config, DB, systemd, cron, and combined backups. | `scripts/backup/acore-list-backups.sh` | No | Read-only | `./bin/acore-manager list-backups` |
+| `list-backups` | List config, DB, systemd, cron, reset, and combined backups. | `scripts/backup/acore-list-backups.sh` | No | Read-only | `./bin/acore-manager list-backups` |
 | `restore-config` | Restore config/systemd/cron metadata from an explicit backup path. | `scripts/backup/acore-restore-config.sh` | Yes with `--apply` | Safe with `--dry-run`; writes files with `--apply` | `./bin/acore-manager restore-config <backup-path> --dry-run` |
 | `restore-db` | Restore SQL dumps from an explicit backup path. | `scripts/backup/acore-restore-db.sh` | Depends on DB grants | Safe with `--dry-run`; live DB change with `--apply` | `./bin/acore-manager restore-db <backup-path> --database all --dry-run` |
+| `reset-instance` | Destructively reset selected instance areas. | `scripts/setup/acore-reset-instance.sh` | Yes with `--apply` | Destructive with `--apply` | `sudo ./bin/acore-manager reset-instance --dry-run --binaries` |
 
 ## OliveTin And Integrations
 

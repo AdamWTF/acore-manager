@@ -31,4 +31,4 @@ list_category "config"
 list_category "db"
 list_category "systemd"
 list_category "cron"
-
+list_category "reset"

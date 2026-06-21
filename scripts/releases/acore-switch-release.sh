@@ -62,6 +62,8 @@ if [[ "$DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
+acquire_acm_lock release
+
 command -v systemctl >/dev/null 2>&1 || die "systemctl is not available"
 validate_systemd_runtime_paths
 

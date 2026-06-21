@@ -313,3 +313,175 @@ thaw_frozen_pids() {
 
   [[ "$thawed" == "true" ]]
 }
+
+lock_env_name() {
+  local name="$1"
+
+  tr '[:lower:]-' '[:upper:]_' <<<"ACM_LOCK_HELD_$name"
+}
+
+acquire_acm_lock() {
+  local name="$1"
+  local env_name lock_dir lock_file meta_file fd_var fd held_by
+
+  env_name="$(lock_env_name "$name")"
+  if [[ "${!env_name:-}" == "true" ]]; then
+    return 0
+  fi
+
+  command -v flock >/dev/null 2>&1 || die "flock is not available; install util-linux"
+
+  lock_dir="$ACM_ROOT/.locks"
+  lock_file="$lock_dir/$name.lock"
+  meta_file="$lock_dir/$name.lock.meta"
+  fd_var="ACM_LOCK_FD_${name//[^A-Za-z0-9_]/_}"
+
+  mkdir -p "$lock_dir"
+  eval "exec {${fd_var}}>\"\$lock_file\""
+  fd="${!fd_var}"
+
+  if ! flock -n "$fd"; then
+    held_by="unknown"
+    [[ -f "$meta_file" ]] && held_by="$(cat "$meta_file" 2>/dev/null || printf unknown)"
+    die "another acore-manager $name operation is already running
+Lock: $lock_file
+Held by:
+$held_by"
+  fi
+
+  {
+    echo "pid=$$"
+    echo "command=$0 $*"
+    echo "started_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "host=$(hostname 2>/dev/null || printf unknown)"
+  } > "$meta_file"
+}
+
+export_acm_lock_held() {
+  local name="$1"
+  local env_name
+
+  env_name="$(lock_env_name "$name")"
+  export "$env_name=true"
+}
+
+resolved_path_or_empty() {
+  local path="$1"
+
+  readlink -f "$path" 2>/dev/null || true
+}
+
+require_absolute_path() {
+  local path="$1"
+  local label="$2"
+
+  [[ -n "$path" ]] || die "$label path is empty"
+  [[ "$path" == /* ]] || die "$label must be an absolute path: $path"
+}
+
+path_is_within() {
+  local child="$1"
+  local parent="$2"
+  local resolved_child resolved_parent
+
+  resolved_child="$(resolved_path_or_empty "$child")"
+  resolved_parent="$(resolved_path_or_empty "$parent")"
+  [[ -n "$resolved_child" && -n "$resolved_parent" ]] || return 1
+
+  case "$resolved_child" in
+    "$resolved_parent"|"$resolved_parent"/*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+path_must_not_be_dangerous() {
+  local path="$1"
+  local label="$2"
+  local resolved
+
+  require_absolute_path "$path" "$label"
+  resolved="$(resolved_path_or_empty "$path")"
+
+  case "$path" in
+    /|/bin|/boot|/dev|/etc|/home|/lib|/lib64|/opt|/proc|/root|/run|/sbin|/sys|/tmp|/usr|/var)
+      die "$label path is too broad to modify: $path"
+      ;;
+  esac
+
+  if [[ -n "$resolved" ]]; then
+    case "$resolved" in
+      /|/bin|/boot|/dev|/etc|/home|/lib|/lib64|/opt|/proc|/root|/run|/sbin|/sys|/tmp|/usr|/var)
+        die "$label resolves to a dangerous path: $resolved"
+        ;;
+    esac
+  fi
+}
+
+resolved_current_target() {
+  if [[ -L "$CURRENT_LINK" ]]; then
+    resolved_path_or_empty "$CURRENT_LINK"
+  fi
+}
+
+current_points_inside_build_dir() {
+  local current_target
+
+  current_target="$(resolved_current_target)"
+  [[ -n "$current_target" ]] || return 1
+  path_is_within "$current_target" "$BUILD_DIR"
+}
+
+require_not_symlink_dir() {
+  local path="$1"
+  local label="$2"
+
+  [[ ! -L "$path" ]] || die "$label must not be a symlink for destructive operations: $path"
+}
+
+require_safe_build_dir() {
+  local expected_build_dir="$ACM_ROOT/build"
+
+  require_absolute_path "$BUILD_DIR" "BUILD_DIR"
+  path_must_not_be_dangerous "$BUILD_DIR" "BUILD_DIR"
+  [[ "$BUILD_DIR" == "$expected_build_dir" ]] || die "BUILD_DIR must be derived as ACM_ROOT/build; got $BUILD_DIR expected $expected_build_dir"
+  require_not_symlink_dir "$BUILD_DIR" "BUILD_DIR"
+
+  for protected_path in "$ACM_ROOT" "$SOURCE_ROOT" "$ACORE_SOURCE_DIR" "$MODULES_DIR" "$RELEASES_DIR" "$SHARED_DIR" "$BACKUP_DIR" "$CONFIG_DIR" "$DATADIR"; do
+    [[ "$BUILD_DIR" != "$protected_path" ]] || die "BUILD_DIR overlaps protected path: $protected_path"
+  done
+
+  if current_points_inside_build_dir; then
+    die "CURRENT_LINK resolves inside BUILD_DIR; refusing to clean build output: $(resolved_current_target)"
+  fi
+}
+
+service_activity_summary() {
+  local auth_state world_state
+
+  auth_state="$(unit_state "$AUTH_SERVICE")"
+  world_state="$(unit_state "$WORLD_SERVICE")"
+  echo "auth=$auth_state world=$world_state"
+}
+
+services_are_active() {
+  unit_active "$AUTH_SERVICE" || unit_active "$WORLD_SERVICE"
+}
+
+require_services_inactive_or_safe_stop_first() {
+  local safe_stop_first="$1"
+
+  if ! services_are_active; then
+    return 0
+  fi
+
+  if [[ "$safe_stop_first" == "true" ]]; then
+    "$ACM_REPO_ROOT/scripts/runtime/acore-safe-stop.sh"
+    return
+  fi
+
+  die "auth/world services are active ($(service_activity_summary)); rerun with --safe-stop-first or stop services explicitly"
+}

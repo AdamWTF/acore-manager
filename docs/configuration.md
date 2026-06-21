@@ -125,6 +125,8 @@ Related recovery commands:
 
 `restore-config --apply` writes files back to shared config, `config/local`, `/etc/systemd/system`, and `/etc/cron.d`, then reloads systemd when available.
 
+Reset manifests are listed by `list-backups` under `BACKUP_DIR/reset` after destructive `reset-instance --apply` runs.
+
 ## Runtime Configs
 
 Live AzerothCore runtime configs belong in shared persistent storage:

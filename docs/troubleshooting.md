@@ -215,6 +215,16 @@ If dependencies are missing on Ubuntu/Debian, rerun:
 sudo ./scripts/setup/acore-bootstrap.sh
 ```
 
+If the build directory appears corrupted, preview and run a clean rebuild:
+
+```bash
+./bin/acore-manager clean-build --dry-run
+./bin/acore-manager clean-build
+./bin/acore-manager rebuild --clean
+```
+
+This removes generated files under `/opt/acore-manager/build` only. It does not delete source, modules, releases, shared configs, shared data, logs, backups, or databases, and it does not restart services.
+
 ## Build Fails In Jemalloc With GCC 15
 
 Symptom:

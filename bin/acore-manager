@@ -30,6 +30,8 @@ Commands:
   update-source    Clone or update AzerothCore source
   update-modules   Clone or update configured modules
   build            Build AzerothCore into staging
+  clean-build      Remove generated build artifacts only
+  rebuild          Run a build, optionally after clean-build
   create-release   Create a timestamped release from staging
   release-latest   Run update, build, release, switch, and status workflow
   list-releases    List releases and mark the active release
@@ -57,6 +59,7 @@ Commands:
   prune-releases   Prune old releases; dry-run by default
   fix-runtime-paths Check/fix installed systemd units that reference staging
   install-services Install/update managed systemd unit files with backups
+  reset-instance   Destructively reset selected instance areas
 EOF
 }
 
@@ -89,6 +92,8 @@ script_for_command() {
     update-source) echo "scripts/source/acore-update-source.sh" ;;
     update-modules) echo "scripts/source/acore-update-modules.sh" ;;
     build) echo "scripts/build/acore-build.sh" ;;
+    clean-build) echo "scripts/build/acore-clean-build.sh" ;;
+    rebuild) echo "scripts/build/acore-rebuild.sh" ;;
     create-release) echo "scripts/build/acore-create-release.sh" ;;
     release-latest) echo "scripts/build/acore-release-latest.sh" ;;
     list-releases) echo "scripts/releases/acore-list-releases.sh" ;;
@@ -116,6 +121,7 @@ script_for_command() {
     prune-releases) echo "scripts/releases/acore-prune-releases.sh" ;;
     fix-runtime-paths) echo "scripts/runtime/acore-fix-runtime-paths.sh" ;;
     install-services) echo "scripts/setup/acore-install-services.sh" ;;
+    reset-instance) echo "scripts/setup/acore-reset-instance.sh" ;;
     *) return 1 ;;
   esac
 }

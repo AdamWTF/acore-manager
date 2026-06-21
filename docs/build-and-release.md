@@ -50,6 +50,31 @@ The build configures AzerothCore with this runtime install prefix:
 
 and stages the install under `/opt/acore-manager/build/staging` for release packaging. This prevents binaries from looking for configs under `build/staging/etc`.
 
+## Clean Build And Rebuild
+
+Use `clean-build` when CMake or partial build output is messy:
+
+```bash
+./bin/acore-manager clean-build --dry-run
+./bin/acore-manager clean-build
+```
+
+`clean-build` removes generated files under `/opt/acore-manager/build` only. It keeps source, modules, releases, `current`, shared configs, shared data, logs, backups, systemd units, and databases. It refuses to run if `current` points inside the build directory or if the build directory is not the expected manager build path.
+
+Use `rebuild --clean` to clean and then run a full build:
+
+```bash
+./bin/acore-manager rebuild --clean
+```
+
+`rebuild` does not create a release, switch `current`, stop services, or restart services. After a successful rebuild, create and switch a release explicitly:
+
+```bash
+./bin/acore-manager create-release
+./bin/acore-manager switch-release --dry-run <release-name>
+sudo ./bin/acore-manager switch-release <release-name>
+```
+
 ## Create Release
 
 ```bash

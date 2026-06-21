@@ -5,6 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/common.sh"
 
+acquire_acm_lock build
+acquire_acm_lock release
+export_acm_lock_held build
+export_acm_lock_held release
+
 release_name=""
 release_path=""
 release_output_file="$(mktemp)"

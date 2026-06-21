@@ -54,6 +54,8 @@ See [Updating acore-manager](docs/updating-manager.md) for optional checks and t
 
 ./bin/acore-manager update-source
 ./bin/acore-manager update-modules
+./bin/acore-manager clean-build --dry-run
+./bin/acore-manager rebuild --clean
 ./bin/acore-manager build
 ./bin/acore-manager create-release
 ./bin/acore-manager list-releases
@@ -73,6 +75,7 @@ sudo ./bin/acore-manager reboot
 - [Install](docs/install.md)
 - [Configuration](docs/configuration.md)
 - [Build and Release](docs/build-and-release.md)
+- [Reset Instance](docs/reset-instance.md)
 - [Runtime](docs/runtime.md)
 - [Idle Sleep](docs/power-sleep.md)
 - [Database Backups and Recovery](docs/database-backups.md)

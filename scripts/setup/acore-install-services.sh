@@ -262,6 +262,8 @@ fi
 
 require_root
 
+acquire_acm_lock install_services
+
 log "Installing acore-manager systemd services"
 install -d -m 0755 "$SYSTEMD_DIR"
 

@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/common.sh"
 
+acquire_acm_lock build
+
 command -v cmake >/dev/null 2>&1 || die "cmake is not available"
 command -v make >/dev/null 2>&1 || die "make is not available"
 
