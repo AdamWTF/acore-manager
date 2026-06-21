@@ -10,6 +10,10 @@ ACORE_GROUP="azerothcore"
 AUTH_SERVICE="azerothcore-auth.service"
 WORLD_SERVICE="azerothcore-world.service"
 
+AUTO_RESTART_ENABLED="false"
+AUTO_RESTART_CRON="20 4 * * 3"
+AUTO_RESTART_USER="root"
+
 SLEEP_ENABLED="true"
 SLEEP_CHECK_INTERVAL="60"
 SLEEP_IDLE_TIMEOUT="300"

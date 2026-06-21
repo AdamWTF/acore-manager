@@ -6,21 +6,27 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
 FORCE=false
+PRINT_AUTO_RESTART_CRON=false
 BACKUP_STAMP="$(date +%Y%m%d-%H%M%S)"
 SYSTEMD_DIR="/etc/systemd/system"
+CRON_DIR="/etc/cron.d"
+AUTO_RESTART_CRON_FILE="$CRON_DIR/acore-manager-restart"
 SERVICE_BACKUP_DIR="$BACKUP_DIR/systemd/$BACKUP_STAMP"
+CRON_BACKUP_DIR="$BACKUP_DIR/cron/$BACKUP_STAMP"
 changed_units=()
+cron_changed=false
 runtime_units_changed=false
 
 usage() {
   cat <<EOF
 Usage:
-  $0 [--force]
+  $0 [--force] [--print-auto-restart-cron]
 
-Installs or updates acore-manager systemd unit files.
+Installs or updates acore-manager systemd unit files and optional cron jobs.
 
 Options:
-  --force  Replace existing managed units after backing them up.
+  --force                    Replace existing managed units after backing them up.
+  --print-auto-restart-cron  Print the rendered automatic restart cron file and exit.
 EOF
 }
 
@@ -28,6 +34,9 @@ while [[ "$#" -gt 0 ]]; do
   case "$1" in
     --force)
       FORCE=true
+      ;;
+    --print-auto-restart-cron)
+      PRINT_AUTO_RESTART_CRON=true
       ;;
     -h|--help)
       usage
@@ -62,6 +71,68 @@ backup_existing_unit() {
   mkdir -p "$SERVICE_BACKUP_DIR"
   cp -a "$dest_file" "$SERVICE_BACKUP_DIR/$service_name"
   echo "Backed up existing unit: $dest_file -> $SERVICE_BACKUP_DIR/$service_name"
+}
+
+backup_existing_cron() {
+  [[ -f "$AUTO_RESTART_CRON_FILE" ]] || return 0
+
+  mkdir -p "$CRON_BACKUP_DIR"
+  cp -a "$AUTO_RESTART_CRON_FILE" "$CRON_BACKUP_DIR/acore-manager-restart"
+  echo "Backed up existing cron file: $AUTO_RESTART_CRON_FILE -> $CRON_BACKUP_DIR/acore-manager-restart"
+}
+
+validate_auto_restart_config() {
+  local field_count
+
+  field_count="$(awk '{ print NF }' <<<"${AUTO_RESTART_CRON:-}")"
+  [[ "$field_count" -eq 5 ]] || die "AUTO_RESTART_CRON must be a standard 5-field cron expression, got: ${AUTO_RESTART_CRON:-}"
+  [[ "${AUTO_RESTART_USER:-}" =~ ^[A-Za-z0-9_.-]+$ ]] || die "AUTO_RESTART_USER contains unsupported characters: ${AUTO_RESTART_USER:-}"
+}
+
+render_auto_restart_cron() {
+  local command_path="$ACM_REPO_ROOT/bin/acore-manager"
+  local log_path="$ACM_ROOT/logs/scheduled-restart.log"
+
+  validate_auto_restart_config
+
+  cat <<EOF
+# Managed by acore-manager. Re-run:
+#   sudo $command_path install-services --force
+# to update this file from config/local/manager.conf.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+${AUTO_RESTART_CRON:-20 4 * * 3} ${AUTO_RESTART_USER:-root} $command_path scheduled-restart >> $log_path 2>&1
+EOF
+}
+
+manage_auto_restart_cron() {
+  log "Managing automatic restart cron"
+
+  if is_truthy "${AUTO_RESTART_ENABLED:-false}"; then
+    validate_auto_restart_config
+    install -d -m 0755 "$CRON_DIR"
+    install -d -m 0755 "$ACM_ROOT/logs"
+    backup_existing_cron
+    render_auto_restart_cron > "$AUTO_RESTART_CRON_FILE"
+    chmod 0644 "$AUTO_RESTART_CRON_FILE"
+    cron_changed=true
+    echo "Installed automatic restart cron: $AUTO_RESTART_CRON_FILE"
+    echo "Schedule: ${AUTO_RESTART_CRON:-20 4 * * 3}"
+    echo "User: ${AUTO_RESTART_USER:-root}"
+    return
+  fi
+
+  echo "Automatic restarts are disabled by config."
+  echo "Default schedule if enabled: ${AUTO_RESTART_CRON:-20 4 * * 3}"
+  echo "Enable with AUTO_RESTART_ENABLED=\"true\" in config/local/manager.conf, then rerun install-services."
+
+  if [[ -f "$AUTO_RESTART_CRON_FILE" ]]; then
+    backup_existing_cron
+    rm -f "$AUTO_RESTART_CRON_FILE"
+    cron_changed=true
+    echo "Removed disabled automatic restart cron: $AUTO_RESTART_CRON_FILE"
+  fi
 }
 
 install_service_template() {
@@ -115,6 +186,11 @@ enable_shutdown_hook() {
   systemctl start "$service"
 }
 
+if [[ "$PRINT_AUTO_RESTART_CRON" == "true" ]]; then
+  render_auto_restart_cron
+  exit 0
+fi
+
 require_root
 
 log "Installing acore-manager systemd services"
@@ -150,6 +226,7 @@ else
 fi
 
 enable_shutdown_hook
+manage_auto_restart_cron
 
 echo
 if [[ "${#changed_units[@]}" -gt 0 ]]; then
@@ -161,6 +238,14 @@ fi
 
 if [[ -d "$SERVICE_BACKUP_DIR" ]]; then
   echo "Unit backups: $SERVICE_BACKUP_DIR"
+fi
+
+if [[ -d "$CRON_BACKUP_DIR" ]]; then
+  echo "Cron backups: $CRON_BACKUP_DIR"
+fi
+
+if [[ "$cron_changed" == "true" ]]; then
+  echo "Automatic restart cron state was updated."
 fi
 
 if [[ "$runtime_units_changed" == "true" ]]; then

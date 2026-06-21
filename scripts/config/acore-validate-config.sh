@@ -187,6 +187,37 @@ check_sleep_config() {
   fi
 }
 
+check_auto_restart_config() {
+  local field_count
+
+  log "Automatic Restarts"
+
+  if ! is_truthy "${AUTO_RESTART_ENABLED:-false}"; then
+    echo "OK: automatic restarts are disabled"
+  else
+    echo "OK: automatic restarts are enabled"
+  fi
+
+  require_var AUTO_RESTART_ENABLED
+  require_var AUTO_RESTART_CRON
+  require_var AUTO_RESTART_USER
+
+  field_count="$(awk '{ print NF }' <<<"${AUTO_RESTART_CRON:-}")"
+  if [[ "$field_count" -eq 5 ]]; then
+    echo "OK: AUTO_RESTART_CRON uses 5-field cron syntax: $AUTO_RESTART_CRON"
+  else
+    echo "ERROR: AUTO_RESTART_CRON must use 5-field cron syntax, got: ${AUTO_RESTART_CRON:-}"
+    errors=$((errors + 1))
+  fi
+
+  if [[ "${AUTO_RESTART_USER:-}" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+    echo "OK: AUTO_RESTART_USER looks valid: $AUTO_RESTART_USER"
+  else
+    echo "ERROR: AUTO_RESTART_USER contains unsupported characters: ${AUTO_RESTART_USER:-}"
+    errors=$((errors + 1))
+  fi
+}
+
 log "Required Variables"
 for name in \
   ACM_ROOT \
@@ -196,6 +227,9 @@ for name in \
   ACORE_GROUP \
   AUTH_SERVICE \
   WORLD_SERVICE \
+  AUTO_RESTART_ENABLED \
+  AUTO_RESTART_CRON \
+  AUTO_RESTART_USER \
   SLEEP_ENABLED \
   MYSQL_HOST \
   MYSQL_PORT \
@@ -226,6 +260,7 @@ check_file_warn "worldserver.conf" "$CONFIG_DIR/worldserver.conf"
 check_active_config_links
 check_data_dirs
 check_sleep_config
+check_auto_restart_config
 
 log "Services"
 require_var AUTH_SERVICE

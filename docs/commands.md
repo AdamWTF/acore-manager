@@ -62,6 +62,7 @@ Direct release script not exposed by the wrapper:
 | `safe-stop` | Stop sleep monitor, thaw frozen auth/world processes, stop services, and verify shutdown-safe state. | `scripts/runtime/acore-safe-stop.sh` | Yes | Disruptive but idempotent | `sudo ./bin/acore-manager safe-stop` |
 | `reboot` | Run `safe-stop`, then reboot with `systemctl reboot`; refuses reboot on failure unless `--force` is used. | `scripts/runtime/acore-reboot.sh` | Yes | Disruptive | `sudo ./bin/acore-manager reboot` |
 | `restart` | Stop world/auth, then start auth/world. | `scripts/runtime/acore-restart.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart` |
+| `scheduled-restart` | Run the normal restart workflow from cron. | `scripts/runtime/acore-scheduled-restart.sh` | Yes | Disruptive | `/opt/acore-manager/bin/acore-manager scheduled-restart` |
 | `restart-world` | Restart world service only. | `scripts/runtime/acore-restart-world.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart-world` |
 | `restart-auth` | Restart auth service only. | `scripts/runtime/acore-restart-auth.sh` | Yes | Disruptive | `sudo ./bin/acore-manager restart-auth` |
 | `sleep-status` | Show idle sleep config, services, ports, world connections, and process state. | `scripts/power/acore-sleep-status.sh` | Sometimes for full service details | Read-only | `./bin/acore-manager sleep-status` |

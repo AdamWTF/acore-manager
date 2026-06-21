@@ -70,6 +70,14 @@ sudo ./bin/acore-manager reboot
 systemctl status acore-manager-shutdown.service
 ```
 
+Optional automatic weekly restarts are configured with cron syntax and are disabled by default:
+
+```bash
+AUTO_RESTART_ENABLED="true"
+AUTO_RESTART_CRON="20 4 * * 3"  # Wednesday 04:20
+sudo ./bin/acore-manager install-services --force
+```
+
 ## Documentation
 
 - [Full Server Setup](docs/full-server-setup.md)

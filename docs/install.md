@@ -59,6 +59,22 @@ sudo ./bin/acore-manager install-services --force
 
 Existing unit files are backed up under `/opt/acore-manager/backups/systemd/<timestamp>/` before replacement. This command reloads systemd and enables/starts `acore-manager-shutdown.service`, but it does not restart live auth/world services.
 
+Automatic server restarts are optional and disabled by default. To enable the default Wednesday 04:20 restart, add this to `config/local/manager.conf`:
+
+```bash
+AUTO_RESTART_ENABLED="true"
+AUTO_RESTART_CRON="20 4 * * 3"
+AUTO_RESTART_USER="root"
+```
+
+Then install or update services:
+
+```bash
+sudo ./bin/acore-manager install-services --force
+```
+
+This writes `/etc/cron.d/acore-manager-restart`. Existing cron files are backed up under `/opt/acore-manager/backups/cron/<timestamp>/`. To disable the scheduled restart, set `AUTO_RESTART_ENABLED="false"` and rerun `install-services`.
+
 ## Permission Denied Recovery
 
 If a copied checkout loses executable bits and a script fails with `Permission denied`, run:

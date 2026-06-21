@@ -17,6 +17,7 @@ Commands:
   safe-stop        Sleep-aware safe stop for maintenance, poweroff, or reboot
   reboot           Run safe-stop, then reboot the host
   restart          Restart world and auth services safely
+  scheduled-restart Restart auth and world services from cron
   restart-world    Restart world service
   restart-auth     Restart auth service
   sleep-status     Show idle sleep proxy, monitor, port, and process status
@@ -63,6 +64,7 @@ script_for_command() {
     safe-stop) echo "scripts/runtime/acore-safe-stop.sh" ;;
     reboot) echo "scripts/runtime/acore-reboot.sh" ;;
     restart) echo "scripts/runtime/acore-restart.sh" ;;
+    scheduled-restart) echo "scripts/runtime/acore-scheduled-restart.sh" ;;
     restart-world) echo "scripts/runtime/acore-restart-world.sh" ;;
     restart-auth) echo "scripts/runtime/acore-restart-auth.sh" ;;
     sleep-status) echo "scripts/power/acore-sleep-status.sh" ;;

@@ -135,6 +135,50 @@ Manual validation checklist:
 - Already stopped server: run `sudo ./bin/acore-manager safe-stop` and confirm it exits successfully.
 - Missing optional services: remove or disable proxy/monitor units in a test environment and confirm `safe-stop` skips them without failing.
 
+## Automatic Scheduled Restarts
+
+`acore-manager` can install an optional cron job that runs the normal restart workflow. It is disabled by default because it stops and starts the live realm.
+
+Default schedule:
+
+```bash
+AUTO_RESTART_CRON="20 4 * * 3"  # Wednesday 04:20 server local time
+AUTO_RESTART_USER="root"
+```
+
+Enable it in `config/local/manager.conf`:
+
+```bash
+AUTO_RESTART_ENABLED="true"
+```
+
+Install or update the cron file:
+
+```bash
+sudo ./bin/acore-manager install-services --force
+cat /etc/cron.d/acore-manager-restart
+```
+
+The cron entry runs:
+
+```bash
+/opt/acore-manager/bin/acore-manager scheduled-restart
+```
+
+`scheduled-restart` calls the existing `restart` workflow, including the sleep thaw step, so restart order remains stop world, stop auth, start auth, start world.
+
+To preview the rendered cron file without touching `/etc`:
+
+```bash
+./scripts/setup/acore-install-services.sh --print-auto-restart-cron
+```
+
+To disable automatic restarts, set `AUTO_RESTART_ENABLED="false"` and rerun:
+
+```bash
+sudo ./bin/acore-manager install-services --force
+```
+
 ## Logs
 
 ```bash
