@@ -113,7 +113,7 @@ This checks required variables, required commands, service names, and path statu
 ./bin/acore-manager config-backup
 ```
 
-This backs up shared configs, `config/local`, and installed systemd service files when present. Missing optional paths produce warnings.
+This backs up shared configs, `config/local`, installed managed systemd service files, and `/etc/cron.d/acore-manager-restart` when present. Missing optional paths produce warnings.
 
 ## Runtime Configs
 

@@ -173,64 +173,6 @@ install_systemd_templates() {
   bash "$installer" "${args[@]}"
 }
 
-configured_realm_port() {
-  local auth_conf="$CONFIG_DIR/authserver.conf"
-
-  [[ -f "$auth_conf" ]] || return 0
-  awk -F= '
-    /^[[:space:]]*RealmServerPort[[:space:]]*=/ {
-      value = $2
-      sub(/[[:space:]]*.*/, "", value)
-      gsub(/"/, "", value)
-      print value
-      exit
-    }
-  ' "$auth_conf"
-}
-
-sleep_services_ready_to_start() {
-  local realm_port
-
-  sleep_enabled || return 1
-  [[ "${AUTH_PUBLIC_PORT:-}" != "${AUTH_BACKEND_PORT:-}" ]] || return 1
-
-  realm_port="$(configured_realm_port)"
-  [[ -n "$realm_port" && "$realm_port" == "$AUTH_BACKEND_PORT" ]] || return 1
-
-  if command -v ss >/dev/null 2>&1; then
-    if ss -ltn "sport = :$AUTH_PUBLIC_PORT" 2>/dev/null | awk 'NR > 1 { found = 1 } END { exit !found }'; then
-      return 1
-    fi
-  fi
-
-  return 0
-}
-
-enable_sleep_services() {
-  if ! sleep_enabled; then
-    echo "Sleep services are disabled by config; skipped enable/start."
-    return
-  fi
-
-  if ! command -v systemctl >/dev/null 2>&1; then
-    echo "WARN: systemctl is not available; skipped sleep service enable/start"
-    return
-  fi
-
-  log "Enabling idle sleep services"
-  systemctl enable acore-sleep-proxy.service
-  systemctl enable acore-sleep-monitor.service
-
-  if sleep_services_ready_to_start; then
-    echo "Sleep port setup looks ready; starting sleep services."
-    systemctl start acore-sleep-proxy.service
-    systemctl start acore-sleep-monitor.service
-  else
-    echo "Sleep services enabled but not started yet."
-    echo "Before starting them, set authserver.conf RealmServerPort to $AUTH_BACKEND_PORT and ensure port $AUTH_PUBLIC_PORT is free for the proxy."
-  fi
-}
-
 print_next_steps() {
   log "Bootstrap complete"
 
@@ -276,5 +218,4 @@ ensure_user
 ensure_directories
 install_local_config_examples
 install_systemd_templates
-enable_sleep_services
 print_next_steps

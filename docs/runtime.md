@@ -24,6 +24,8 @@ sudo ./bin/acore-manager install-services --force
 
 Existing unit files are backed up under `/opt/acore-manager/backups/systemd/<timestamp>/` before replacement. The command reloads systemd and enables/starts `acore-manager-shutdown.service`, but it does not restart live auth/world services.
 
+When `SLEEP_ENABLED=true`, `install-services` also enables the sleep proxy/monitor units and starts them only when the auth backend/public port split is ready.
+
 Prepare databases, data files, and configs before starting services. See [Full Server Setup](full-server-setup.md).
 
 Runtime configs are shared and linked into the active release:
@@ -165,7 +167,7 @@ The cron entry runs:
 /opt/acore-manager/bin/acore-manager scheduled-restart
 ```
 
-`scheduled-restart` calls the existing `restart` workflow, including the sleep thaw step, so restart order remains stop world, stop auth, start auth, start world.
+The command path is rendered from `ACM_ROOT`; the default is `/opt/acore-manager/bin/acore-manager`. `scheduled-restart` calls the existing `restart` workflow, including the sleep thaw step, so restart order remains stop world, stop auth, start auth, start world.
 
 To preview the rendered cron file without touching `/etc`:
 

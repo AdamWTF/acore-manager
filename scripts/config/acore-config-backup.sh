@@ -55,6 +55,10 @@ copy_dir_if_present "$ACM_REPO_ROOT/config/local" "manager-local"
 
 copy_file_if_present "/etc/systemd/system/$AUTH_SERVICE" "systemd"
 copy_file_if_present "/etc/systemd/system/$WORLD_SERVICE" "systemd"
+copy_file_if_present "/etc/systemd/system/acore-sleep-proxy.service" "systemd"
+copy_file_if_present "/etc/systemd/system/acore-sleep-monitor.service" "systemd"
+copy_file_if_present "/etc/systemd/system/acore-manager-shutdown.service" "systemd"
+copy_file_if_present "/etc/cron.d/acore-manager-restart" "cron"
 
 echo
 echo "Config backup completed."

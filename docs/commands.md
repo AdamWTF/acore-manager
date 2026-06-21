@@ -91,7 +91,7 @@ Direct release script not exposed by the wrapper:
 
 | Command | Purpose | Script | Needs sudo? | Risk | Example |
 | --- | --- | --- | --- | --- | --- |
-| `config-backup` | Back up shared configs, `config/local`, and installed service files when present. | `scripts/config/acore-config-backup.sh` | Sometimes | Safe | `./bin/acore-manager config-backup` |
+| `config-backup` | Back up shared configs, `config/local`, managed systemd units, and restart cron when present. | `scripts/config/acore-config-backup.sh` | Sometimes | Safe | `./bin/acore-manager config-backup` |
 | `db-backup` | Back up configured MySQL databases. | `scripts/db/acore-db-backup.sh` | Depends on backup directory ownership | Safe | `./bin/acore-manager db-backup` |
 
 ## OliveTin And Integrations

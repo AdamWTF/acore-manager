@@ -90,7 +90,7 @@ validate_auto_restart_config() {
 }
 
 render_auto_restart_cron() {
-  local command_path="$ACM_REPO_ROOT/bin/acore-manager"
+  local command_path="$ACM_ROOT/bin/acore-manager"
   local log_path="$ACM_ROOT/logs/scheduled-restart.log"
 
   validate_auto_restart_config
@@ -186,6 +186,75 @@ enable_shutdown_hook() {
   systemctl start "$service"
 }
 
+configured_realm_port() {
+  local auth_conf="$CONFIG_DIR/authserver.conf"
+
+  [[ -f "$auth_conf" ]] || return 0
+  awk -F= '
+    /^[[:space:]]*RealmServerPort[[:space:]]*=/ {
+      value = $2
+      sub(/[[:space:]]*.*/, "", value)
+      gsub(/"/, "", value)
+      print value
+      exit
+    }
+  ' "$auth_conf"
+}
+
+sleep_services_ready_to_start() {
+  local realm_port
+
+  sleep_enabled || return 1
+  [[ "${AUTH_PUBLIC_PORT:-}" != "${AUTH_BACKEND_PORT:-}" ]] || return 1
+
+  realm_port="$(configured_realm_port)"
+  [[ -n "$realm_port" && "$realm_port" == "$AUTH_BACKEND_PORT" ]] || return 1
+
+  if command -v ss >/dev/null 2>&1; then
+    if ss -ltn "sport = :$AUTH_PUBLIC_PORT" 2>/dev/null | awk 'NR > 1 { found = 1 } END { exit !found }'; then
+      return 1
+    fi
+  fi
+
+  return 0
+}
+
+manage_sleep_services() {
+  local service
+
+  if ! sleep_enabled; then
+    echo "Sleep services are disabled by config; skipped enable/start."
+    return
+  fi
+
+  if ! systemd_available; then
+    echo "WARN: systemctl is not available; skipped sleep service enable/start"
+    return
+  fi
+
+  log "Managing idle sleep services"
+  for service in acore-sleep-proxy.service acore-sleep-monitor.service; do
+    if systemd_unit_exists "$service"; then
+      echo "Enabling sleep service: $service"
+      systemctl enable "$service"
+    else
+      echo "WARN: sleep service unit is not installed: $service"
+    fi
+  done
+
+  if sleep_services_ready_to_start; then
+    echo "Sleep port setup looks ready; starting sleep services."
+    for service in acore-sleep-proxy.service acore-sleep-monitor.service; do
+      if systemd_unit_exists "$service"; then
+        systemctl start "$service"
+      fi
+    done
+  else
+    echo "Sleep services enabled but not started yet."
+    echo "Before starting them, set authserver.conf RealmServerPort to $AUTH_BACKEND_PORT and ensure port $AUTH_PUBLIC_PORT is free for the proxy."
+  fi
+}
+
 if [[ "$PRINT_AUTO_RESTART_CRON" == "true" ]]; then
   render_auto_restart_cron
   exit 0
@@ -226,6 +295,7 @@ else
 fi
 
 enable_shutdown_hook
+manage_sleep_services
 manage_auto_restart_cron
 
 echo

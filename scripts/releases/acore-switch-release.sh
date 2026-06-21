@@ -17,9 +17,99 @@ release_dir="$RELEASES_DIR/$release_name"
 [[ -x "$release_dir/bin/worldserver" ]] || die "worldserver is not executable in release: $release_dir/bin/worldserver"
 validate_systemd_runtime_paths
 
+previous_target=""
+if [[ -L "$CURRENT_LINK" ]]; then
+  previous_target="$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)"
+fi
+
+link_configs_script="$ACM_REPO_ROOT/scripts/config/acore-link-shared-configs.sh"
+[[ -x "$link_configs_script" ]] || die "shared config linker is not executable: $link_configs_script"
+
+rollback_to_previous_release() {
+  local reason="$1"
+  local rollback_failed=false
+
+  log "Rolling back failed release switch"
+  echo "Reason: $reason"
+
+  if [[ -z "$previous_target" || ! -d "$previous_target" ]]; then
+    echo "ERROR: no previous release target is available; manual recovery is required."
+    echo "Current link: $CURRENT_LINK"
+    return 1
+  fi
+
+  echo "Stopping services before rollback"
+  systemctl stop "$WORLD_SERVICE" || rollback_failed=true
+  systemctl stop "$AUTH_SERVICE" || rollback_failed=true
+
+  echo "Restoring current link: $CURRENT_LINK -> $previous_target"
+  ln -sfn "$previous_target" "$CURRENT_LINK" || rollback_failed=true
+
+  if [[ "$rollback_failed" != "true" ]]; then
+    echo "Relinking shared configs for previous release"
+    "$link_configs_script" || rollback_failed=true
+  fi
+
+  echo "Attempting to restart previous auth service: $AUTH_SERVICE"
+  systemctl start "$AUTH_SERVICE" || rollback_failed=true
+
+  echo "Attempting to restart previous world service: $WORLD_SERVICE"
+  systemctl start "$WORLD_SERVICE" || rollback_failed=true
+
+  if [[ "$rollback_failed" == "true" ]]; then
+    echo "ERROR: rollback attempt did not complete cleanly; inspect services and $CURRENT_LINK manually."
+    return 1
+  fi
+
+  echo "Rollback complete. Previous release is active again."
+  return 0
+}
+
+fail_and_rollback() {
+  local reason="$1"
+
+  rollback_to_previous_release "$reason" || true
+  die "$reason"
+}
+
+validate_switched_runtime() {
+  local current_target
+
+  [[ -L "$CURRENT_LINK" ]] || {
+    echo "ERROR: CURRENT_LINK is not a symlink: $CURRENT_LINK"
+    return 1
+  }
+
+  current_target="$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)"
+  [[ -n "$current_target" && -d "$current_target" ]] || {
+    echo "ERROR: CURRENT_LINK does not point to a release: $CURRENT_LINK"
+    return 1
+  }
+
+  case "$current_target" in
+    "$RELEASES_DIR"/*)
+      ;;
+    *)
+      echo "ERROR: CURRENT_LINK must point under RELEASES_DIR ($RELEASES_DIR), got: $current_target"
+      return 1
+      ;;
+  esac
+
+  [[ -x "$CURRENT_LINK/bin/authserver" ]] || {
+    echo "ERROR: authserver is missing or not executable: $CURRENT_LINK/bin/authserver"
+    return 1
+  }
+
+  [[ -x "$CURRENT_LINK/bin/worldserver" ]] || {
+    echo "ERROR: worldserver is missing or not executable: $CURRENT_LINK/bin/worldserver"
+    return 1
+  }
+}
+
 log "Switching active release"
 echo "Release: $release_name"
 echo "Path: $release_dir"
+echo "Previous release: ${previous_target:-none}"
 sleep_thaw_if_enabled
 
 echo "Stopping world service: $WORLD_SERVICE"
@@ -32,19 +122,16 @@ mkdir -p "$(dirname "$CURRENT_LINK")"
 ln -sfn "$release_dir" "$CURRENT_LINK"
 echo "Updated current link: $CURRENT_LINK -> $release_dir"
 
-validate_current_runtime
-
-link_configs_script="$ACM_REPO_ROOT/scripts/config/acore-link-shared-configs.sh"
-[[ -x "$link_configs_script" ]] || die "shared config linker is not executable: $link_configs_script"
-"$link_configs_script"
+validate_switched_runtime || fail_and_rollback "new release failed runtime validation: $release_dir"
+"$link_configs_script" || fail_and_rollback "failed to link shared configs for new release: $release_dir"
 
 echo "Active runtime path: $CURRENT_LINK"
 
 echo "Starting auth service: $AUTH_SERVICE"
-systemctl start "$AUTH_SERVICE" || die "failed to start auth service: $AUTH_SERVICE"
+systemctl start "$AUTH_SERVICE" || fail_and_rollback "failed to start auth service: $AUTH_SERVICE"
 
 echo "Starting world service: $WORLD_SERVICE"
-systemctl start "$WORLD_SERVICE" || die "failed to start world service: $WORLD_SERVICE"
+systemctl start "$WORLD_SERVICE" || fail_and_rollback "failed to start world service: $WORLD_SERVICE"
 
 status_script="$ACM_REPO_ROOT/scripts/runtime/acore-status.sh"
 if [[ -x "$status_script" ]]; then

@@ -115,6 +115,8 @@ Switching validates the release, updates:
 
 and restarts services in the safe order: stop world, stop auth, start auth, start world. `current` must never point at `/opt/acore-manager/build/staging`.
 
+If relinking configs or starting the new release fails, `switch-release` relinks `current` back to the previous release, relinks shared configs again, and attempts to restart the previous auth/world services before exiting non-zero.
+
 On a first server, prepare data files and configs before switching, because `switch-release` starts services. During switch, `acore-manager` relinks shared configs into the new active release before starting services:
 
 ```text
