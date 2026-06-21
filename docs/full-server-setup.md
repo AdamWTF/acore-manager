@@ -1,6 +1,7 @@
 # Full Server Setup
 
 This guide is the end-to-end path from a fresh Linux host to running native AzerothCore systemd services with `acore-manager`.
+For an existing installed manager after `git pull`, use [Updating acore-manager](updating-manager.md).
 
 `acore-manager` automates host preparation, source/module updates, builds, releases, backups, service wrappers, and status checks. It does not replace AzerothCore's own database setup process, does not download client data files, and does not make management UIs safe for public exposure.
 
@@ -47,7 +48,7 @@ Clone the repo, fix executable bits if needed, and run bootstrap:
 ```bash
 sudo mkdir -p /opt/acore-manager
 sudo chown "$USER":"$USER" /opt/acore-manager
-git clone https://github.com/<your-org>/acore-manager.git /opt/acore-manager
+git clone https://github.com/AdamWTF/acore-manager.git /opt/acore-manager
 cd /opt/acore-manager
 
 find scripts -type f -name "*.sh" -exec chmod +x {} \;
@@ -345,12 +346,24 @@ acore_world
 acore_characters
 ```
 
-`acore-manager` can check and back up configured databases. It does not currently create, initialize, or import AzerothCore databases. Follow the upstream AzerothCore database setup process for initial DB creation/imports and updates.
+`acore-manager` can check, create missing configured databases, import explicit SQL files, and back up configured databases. Follow the upstream AzerothCore database setup process for the actual auth/world/characters schema and seed SQL.
 
 Check connectivity and database presence:
 
 ```bash
 ./bin/acore-manager db-check
+```
+
+Preview database creation:
+
+```bash
+./bin/acore-manager db-init --dry-run
+```
+
+Import explicit SQL only when you know which configured database it targets:
+
+```bash
+./bin/acore-manager db-import <sql-file> --database auth --dry-run
 ```
 
 Back up before real release switches or risky maintenance:
@@ -396,10 +409,11 @@ List releases:
 ./bin/acore-manager list-releases
 ```
 
-Switch to one:
+Dry-run the switch, then switch to one:
 
 ```bash
-./bin/acore-manager switch-release <release-name>
+./bin/acore-manager switch-release --dry-run <release-name>
+sudo ./bin/acore-manager switch-release <release-name>
 ```
 
 This validates the release, stops world then auth, updates `/opt/acore-manager/current`, relinks shared configs into the new active release, starts auth then world, and runs status. On a first server, prepare data files, shared configs, databases, and systemd templates before switching, because switching starts services.
@@ -429,15 +443,6 @@ Using `acore-manager`:
 ```bash
 ./bin/acore-manager start
 ./bin/acore-manager status
-```
-
-Direct systemd equivalents:
-
-```bash
-sudo systemctl start azerothcore-auth.service
-sudo systemctl start azerothcore-world.service
-systemctl status azerothcore-auth.service --no-pager
-systemctl status azerothcore-world.service --no-pager
 ```
 
 ## Logs And Verification
@@ -508,9 +513,12 @@ For future maintenance:
 ./bin/acore-manager create-release
 ./bin/acore-manager config-backup
 ./bin/acore-manager db-backup
+./bin/acore-manager backup-all
 ./bin/acore-manager list-releases
-./bin/acore-manager switch-release <release-name>
+./bin/acore-manager switch-release --dry-run <release-name>
+sudo ./bin/acore-manager switch-release <release-name>
 ./bin/acore-manager status
+./bin/acore-manager doctor
 ./bin/acore-manager last-errors
 ./bin/acore-manager validate-runtime
 ```
@@ -523,7 +531,7 @@ Schedule downtime when needed. Back up databases and configs before switching re
 
 ```bash
 ./bin/acore-manager list-releases
-./bin/acore-manager rollback
+sudo ./bin/acore-manager rollback
 ```
 
 Rollback selects the previous release by sorted release directory order and calls `switch-release`. It changes the active release symlink and restarts services. It does not roll back database migrations, data file changes, or manual config edits.

@@ -7,7 +7,7 @@ Risk levels:
 - Read-only: should not change the system.
 - Safe: writes backups, checks, or local artifacts without touching running services.
 - Disruptive: starts/stops services, switches releases, or runs long builds.
-- Destructive: deletes or prunes data. No destructive command is currently exposed by `bin/acore-manager`.
+- Destructive: deletes, prunes, restores, imports, or otherwise changes live data. These commands require explicit flags such as `--apply`.
 
 ## Setup And Config
 
@@ -49,12 +49,6 @@ Direct setup scripts:
 | `rollback` | Switch to the previous release and restart services. | `scripts/releases/acore-rollback.sh` | Yes | Disruptive | `sudo ./bin/acore-manager rollback` |
 | `release-report` | Show release binaries, metadata, config templates, and active status. | `scripts/releases/acore-release-report.sh` | No | Read-only | `./bin/acore-manager release-report <release-name>` |
 | `prune-releases` | Prune old releases; dry-run by default and `--apply` required for deletion. | `scripts/releases/acore-prune-releases.sh` | Depends on release ownership | Destructive with `--apply` | `./bin/acore-manager prune-releases --dry-run` |
-
-Direct release script not exposed by the wrapper:
-
-| Script | Purpose | Needs sudo? | Risk | Example |
-| --- | --- | --- | --- | --- |
-| `scripts/releases/acore-prune-releases.sh` | Prune older releases while keeping the active release and recent releases; dry-run by default. | Depends on release ownership | Destructive with `--apply` | `./scripts/releases/acore-prune-releases.sh --dry-run` |
 
 ## Runtime And Services
 
@@ -100,7 +94,6 @@ Direct release script not exposed by the wrapper:
 | Command | Purpose | Script | Needs sudo? | Risk | Example |
 | --- | --- | --- | --- | --- | --- |
 | `config-backup` | Back up shared configs, `config/local`, managed systemd units, and restart cron when present. | `scripts/config/acore-config-backup.sh` | Sometimes | Safe | `./bin/acore-manager config-backup` |
-| `db-backup` | Back up configured MySQL databases. | `scripts/db/acore-db-backup.sh` | Depends on backup directory ownership | Safe | `./bin/acore-manager db-backup` |
 | `backup-all` | Run config and DB backups and write a combined manifest. | `scripts/backup/acore-backup-all.sh` | Depends on backup ownership and DB credentials | Safe | `./bin/acore-manager backup-all` |
 | `list-backups` | List config, DB, systemd, cron, and combined backups. | `scripts/backup/acore-list-backups.sh` | No | Read-only | `./bin/acore-manager list-backups` |
 | `restore-config` | Restore config/systemd/cron metadata from an explicit backup path. | `scripts/backup/acore-restore-config.sh` | Yes with `--apply` | Safe with `--dry-run`; writes files with `--apply` | `./bin/acore-manager restore-config <backup-path> --dry-run` |
@@ -117,7 +110,3 @@ These scripts are optional and are not required for core server management.
 | `scripts/integrations/acore-install-olivetin.sh` | Install OliveTin, render config, enable and start OliveTin. | Yes | Disruptive | `sudo ./scripts/integrations/acore-install-olivetin.sh` |
 
 See [Idle Sleep](power-sleep.md) for the default sleep proxy and monitor services.
-
-## Troubleshooting Gaps
-
-- `check-db` / `backup-db`: use the implemented `db-check` and `db-backup` command names.

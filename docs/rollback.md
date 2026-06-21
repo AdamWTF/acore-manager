@@ -23,15 +23,15 @@ The active release is marked clearly.
 ## Switch Release
 
 ```bash
-./bin/acore-manager switch-release <release-name>
+sudo ./bin/acore-manager switch-release <release-name>
 ```
 
-The switch script validates the release directory and binaries before changing the symlink. It then stops world, stops auth, updates `CURRENT_LINK`, starts auth, starts world, and runs status.
+The switch script validates the release directory and binaries before changing the symlink. It then stops world, stops auth, updates `CURRENT_LINK`, relinks shared configs, starts auth, starts world, and runs status. If relinking configs or starting services fails, it attempts to restore the previous `CURRENT_LINK` target and restart the previous release.
 
 ## Roll Back
 
 ```bash
-./bin/acore-manager rollback
+sudo ./bin/acore-manager rollback
 ```
 
 Rollback identifies the current release, selects the previous release by sorted release directory order, and delegates to `switch-release`.
@@ -41,7 +41,8 @@ If there is no previous release, rollback fails clearly and does not guess.
 ## Prune Releases
 
 ```bash
-./scripts/releases/acore-prune-releases.sh
+./bin/acore-manager prune-releases --dry-run
+sudo ./bin/acore-manager prune-releases --keep 5 --apply
 ```
 
-This keeps the active release plus a small number of recent releases. The default keep count is `5`, or set `ACORE_RELEASE_KEEP_COUNT`.
+This keeps the active release plus a small number of recent releases. The default keep count is `5`, or set `ACORE_RELEASE_KEEP_COUNT`. Dry-run is the default; deletion requires `--apply`.

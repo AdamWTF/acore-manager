@@ -13,7 +13,7 @@ Clone the repository where you want to manage it. If you use the default root:
 ```bash
 sudo mkdir -p /opt/acore-manager
 sudo chown "$USER":"$USER" /opt/acore-manager
-git clone https://github.com/<your-org>/acore-manager.git /opt/acore-manager
+git clone https://github.com/AdamWTF/acore-manager.git /opt/acore-manager
 cd /opt/acore-manager
 ```
 
@@ -49,31 +49,7 @@ To overwrite installed service templates:
 sudo ./scripts/setup/acore-bootstrap.sh --force
 ```
 
-The bootstrap does not build AzerothCore and does not enable or start the auth/world services. `install-services` manages the shutdown hook, optional sleep services, and optional automatic restart cron.
-
-To install or update only the managed systemd units on an existing server:
-
-```bash
-sudo ./bin/acore-manager install-services --force
-```
-
-Existing unit files are backed up under `/opt/acore-manager/backups/systemd/<timestamp>/` before replacement. This command reloads systemd and enables/starts `acore-manager-shutdown.service`, but it does not restart live auth/world services.
-
-Automatic server restarts are optional and disabled by default. To enable the default Wednesday 04:20 restart, add this to `config/local/manager.conf`:
-
-```bash
-AUTO_RESTART_ENABLED="true"
-AUTO_RESTART_CRON="20 4 * * 3"
-AUTO_RESTART_USER="root"
-```
-
-Then install or update services:
-
-```bash
-sudo ./bin/acore-manager install-services --force
-```
-
-This writes `/etc/cron.d/acore-manager-restart` using the configured `ACM_ROOT` command path. Existing cron files are backed up under `/opt/acore-manager/backups/cron/<timestamp>/`. To disable the scheduled restart, set `AUTO_RESTART_ENABLED="false"` and rerun `install-services`.
+The bootstrap does not build AzerothCore and does not enable or start auth/world services. For existing installs, use [Updating acore-manager](updating-manager.md) instead of rerunning full bootstrap.
 
 ## Permission Denied Recovery
 
@@ -102,12 +78,12 @@ After bootstrap:
 
 ```bash
 ./bin/acore-manager validate
-./bin/acore-manager status
-./bin/acore-manager sleep-status
+./bin/acore-manager service-status
+./bin/acore-manager doctor
 ```
 
 If `bin/acore-manager` is added to your `PATH`, you can run `acore-manager` from anywhere.
 
 At this point you have `acore-manager` installed, not necessarily a running AzerothCore server. Continue with [Full Server Setup](full-server-setup.md) for source updates, build/release, client data files, runtime configs, databases, systemd services, logs, firewall, and client connection checks.
 
-In particular, release creation alone is not enough. A first server still needs shared configs prepared with `prepare-configs`, data checked with `check-data`, and shared configs linked into the active release with `link-configs` or `switch-release`. For idle sleep, set `RealmServerPort = 3725` in shared `authserver.conf` before starting the sleep proxy.
+Release creation alone is not enough. A first server still needs shared configs, data files, databases, and a release switch. For idle sleep, set `RealmServerPort = 3725` in shared `authserver.conf` before starting the sleep proxy.

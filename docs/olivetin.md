@@ -200,7 +200,7 @@ Confirm your firewall allows access only from the trusted LAN/VPN range.
 
 ```bash
 journalctl -u OliveTin -n 100 --no-pager
-sudo ./scripts/integrations/acore-validate-olivetin-config.sh
+./scripts/integrations/acore-validate-olivetin-config.sh
 ```
 
 Fix the reported issue, then restart:
