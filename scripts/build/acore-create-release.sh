@@ -12,6 +12,7 @@ command -v git >/dev/null 2>&1 || die "git is not available"
 
 STAGING_DIR="$BUILD_DIR/staging"
 [[ -d "$STAGING_DIR" ]] || die "staging directory does not exist: $STAGING_DIR"
+validate_runtime_artifacts "$STAGING_DIR" "staging"
 
 timestamp="$(date -u +%Y%m%d-%H%M%S)"
 release_name="$timestamp"
@@ -31,6 +32,8 @@ if command -v rsync >/dev/null 2>&1; then
 else
   cp -a "$STAGING_DIR/." "$release_dir/"
 fi
+
+validate_runtime_artifacts "$release_dir" "release"
 
 if [[ -d "$release_dir/etc" ]]; then
   mv "$release_dir/etc" "$release_dir/etc.dist"

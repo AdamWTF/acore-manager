@@ -162,6 +162,14 @@ This orchestrates validation, DB check, source/module updates, build, release cr
 
 Use the high-level workflow only after the manual flow is understood and the server already has working data, configs, databases, and services.
 
+If module-generated build files appear stale or the linker references removed module symbols, run the high-level workflow with a clean build first:
+
+```bash
+sudo ./bin/acore-manager release-latest --clean
+```
+
+`create-release` refuses to package staging output unless `bin/authserver` and `bin/worldserver` are present and executable.
+
 ## Prune Releases
 
 Preview pruning old releases:

@@ -485,3 +485,12 @@ require_services_inactive_or_safe_stop_first() {
 
   die "auth/world services are active ($(service_activity_summary)); rerun with --safe-stop-first or stop services explicitly"
 }
+
+validate_runtime_artifacts() {
+  local runtime_dir="$1"
+  local label="${2:-runtime}"
+
+  [[ -d "$runtime_dir" ]] || die "$label directory does not exist: $runtime_dir"
+  [[ -x "$runtime_dir/bin/authserver" ]] || die "$label authserver is missing or not executable: $runtime_dir/bin/authserver"
+  [[ -x "$runtime_dir/bin/worldserver" ]] || die "$label worldserver is missing or not executable: $runtime_dir/bin/worldserver"
+}

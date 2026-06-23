@@ -5,6 +5,37 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/common.sh"
 
+CLEAN=false
+
+usage() {
+  cat <<EOF
+Usage:
+  $0 [--clean]
+
+Runs validate, DB check, source/module update, build, release creation,
+config preparation, config backup, release switch, and final status.
+
+Options:
+  --clean  Remove generated build artifacts before building.
+EOF
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --clean)
+      CLEAN=true
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      die "unknown argument: $1"
+      ;;
+  esac
+  shift
+done
+
 acquire_acm_lock build
 acquire_acm_lock release
 export_acm_lock_held build
@@ -41,6 +72,9 @@ run_step "Validating config" "$ACM_REPO_ROOT/scripts/config/acore-validate-confi
 run_step "Checking database" "$ACM_REPO_ROOT/scripts/db/acore-db-check.sh"
 run_step "Updating AzerothCore source" "$ACM_REPO_ROOT/scripts/source/acore-update-source.sh"
 run_step "Updating AzerothCore modules" "$ACM_REPO_ROOT/scripts/source/acore-update-modules.sh"
+if [[ "$CLEAN" == "true" ]]; then
+  run_step "Cleaning generated build artifacts" "$ACM_REPO_ROOT/scripts/build/acore-clean-build.sh"
+fi
 run_step "Building AzerothCore" "$ACM_REPO_ROOT/scripts/build/acore-build.sh"
 
 required_script "$ACM_REPO_ROOT/scripts/build/acore-create-release.sh"

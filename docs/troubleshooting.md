@@ -237,6 +237,20 @@ If the build directory appears corrupted, preview and run a clean rebuild:
 
 This removes generated files under `/opt/acore-manager/build` only. It does not delete source, modules, releases, shared configs, shared data, logs, backups, or databases, and it does not restart services.
 
+If the failure mentions an undefined module loader symbol, for example:
+
+```text
+undefined reference to `Addmod_discord_webhookScripts()'
+```
+
+first try a clean high-level release:
+
+```bash
+sudo ./bin/acore-manager release-latest --clean
+```
+
+If the same symbol fails after a clean build, the named module is likely incompatible with the current AzerothCore source or is missing its expected script registration function. Disable, update, or patch that module, then rebuild cleanly.
+
 ## Build Fails In Jemalloc With GCC 15
 
 Symptom:

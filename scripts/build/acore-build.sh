@@ -107,6 +107,8 @@ else
   cp -a "$staged_prefix/." "$STAGING_DIR/"
 fi
 
+validate_runtime_artifacts "$STAGING_DIR" "staging"
+
 echo
 echo "Build completed successfully."
 echo "Staging directory: $STAGING_DIR"
