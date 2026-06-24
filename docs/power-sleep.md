@@ -9,8 +9,8 @@ SLEEP_ENABLED="true"
 SLEEP_IDLE_TIMEOUT="300"
 MIN_UPTIME_BEFORE_SLEEP="600"
 REQUIRE_WORLDSERVER_READY="1"
-REQUIRE_PLAYERBOTS_READY="1"
-REQUIRE_BOT_LEVEL_BRACKETS_READY="1"
+REQUIRE_PLAYERBOTS_READY="0"
+REQUIRE_BOT_LEVEL_BRACKETS_READY="0"
 AUTH_PUBLIC_PORT="3724"
 AUTH_BACKEND_PORT="3725"
 WORLD_PORTS="8085 3443"
@@ -32,7 +32,7 @@ The sleep scripts need `socat`, `ss`, `pgrep`, `ps`, `journalctl`, and `systemd`
 
 The monitor refuses to freeze the server until worldserver has been up for at least `MIN_UPTIME_BEFORE_SLEEP` seconds. The default is `600`.
 
-By default it also checks the current boot logs for:
+You can opt into additional module readiness checks. These check the current boot logs for:
 
 ```text
 worldserver-daemon) ready
@@ -40,12 +40,14 @@ mod-playerbots initialized
 [BotLevelBrackets] Module loaded
 ```
 
-These checks prevent `SIGSTOP` from interrupting late PlayerBots and BotLevelBrackets initialization. If a server does not use those modules, disable the matching checks in `config/local/manager.conf`:
+These checks can prevent `SIGSTOP` from interrupting late PlayerBots and BotLevelBrackets initialization, but module log messages vary by branch/version. Enable them only when the configured log strings match your server:
 
 ```bash
-REQUIRE_PLAYERBOTS_READY="0"
-REQUIRE_BOT_LEVEL_BRACKETS_READY="0"
+REQUIRE_PLAYERBOTS_READY="1"
+REQUIRE_BOT_LEVEL_BRACKETS_READY="1"
 ```
+
+If sleep-status reports a repeated skip reason such as `bot-level-brackets-not-ready`, either confirm the module really has not initialized or disable that readiness gate in `config/local/manager.conf`.
 
 ## Configure Auth Backend Port
 
@@ -65,6 +67,12 @@ Validate the setup:
 ```
 
 If validation says `RealmServerPort` is still `3724`, update the shared config and restart auth/world before starting the proxy.
+
+Whitespace around `=` is supported, for example:
+
+```text
+RealmServerPort = 3725
+```
 
 ## Services
 

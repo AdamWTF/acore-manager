@@ -102,6 +102,13 @@ echo "Auth backend: ${AUTH_BACKEND_HOST:-}:${AUTH_BACKEND_PORT:-}"
 echo "World ports: ${WORLD_PORTS:-}"
 echo "State dir: ${SLEEP_STATE_DIR:-}"
 
+last_skip_file="${SLEEP_STATE_DIR:-}/last-sleep-skip-reason"
+if [[ -f "$last_skip_file" ]]; then
+  echo "Last sleep skip reason: $(cat "$last_skip_file" 2>/dev/null || true)"
+else
+  echo "Last sleep skip reason: none recorded"
+fi
+
 log "Sleep Services"
 if command -v systemctl >/dev/null 2>&1; then
   for service in acore-sleep-proxy.service acore-sleep-monitor.service azerothcore-auth-proxy.service azerothcore-monitor.service; do

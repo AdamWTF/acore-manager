@@ -80,8 +80,9 @@ configured_realm_port() {
   awk -F= '
     /^[[:space:]]*RealmServerPort[[:space:]]*=/ {
       value = $2
-      sub(/[[:space:]]*.*/, "", value)
-      gsub(/"/, "", value)
+      sub(/^[[:space:]]*/, "", value)
+      sub(/[[:space:]]*(#.*)?$/, "", value)
+      gsub(/^"|"$/, "", value)
       print value
       exit
     }

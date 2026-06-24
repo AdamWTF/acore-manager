@@ -211,6 +211,42 @@ ss -ltnp | grep -E '3724|8085'
 
 If login works but the realm or character list hangs, check the realm address in the auth database, worldserver port reachability, and both service logs.
 
+## Sleep Services Stay Stopped
+
+Run:
+
+```bash
+./bin/acore-manager validate
+./bin/acore-manager sleep-status
+```
+
+For sleep mode, shared `authserver.conf` should contain:
+
+```text
+RealmServerPort = 3725
+```
+
+Then rerun:
+
+```bash
+sudo ./bin/acore-manager install-services --force
+```
+
+If validation cannot confirm `RealmServerPort`, inspect the shared config path reported by `validate`.
+
+If `sleep-status` or the monitor journal repeatedly reports `playerbots-not-ready` or `bot-level-brackets-not-ready`, the optional module readiness gate is blocking sleep. Unless you have verified that those exact startup log messages exist on your server, set:
+
+```bash
+REQUIRE_PLAYERBOTS_READY="0"
+REQUIRE_BOT_LEVEL_BRACKETS_READY="0"
+```
+
+Then restart the monitor:
+
+```bash
+sudo systemctl restart acore-sleep-monitor.service
+```
+
 ## Build Fails
 
 Update source and modules before building:
